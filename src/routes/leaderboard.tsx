@@ -181,23 +181,26 @@ function Page() {
               <table className="w-full text-sm">
                 <thead className="border-b border-border bg-card/40">
                   <tr className="text-left text-xs uppercase tracking-widest text-muted-foreground">
-                    <Th>Rank</Th><Th>Player</Th>
-                    <Th right>Won</Th><Th right>Lost</Th><Th right>Total</Th><Th right>PTS</Th>
+                    <Th>Rank</Th><Th>Gang &amp; Faction</Th><Th>Player</Th>
+                    <Th right>W</Th><Th right>L</Th><Th right>D</Th><Th right>P</Th><Th right>PTS</Th>
                   </tr>
                 </thead>
                 <tbody>
-                  {shooters.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No shooters yet.</td></tr>}
+                  {shooters.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No shooters yet.</td></tr>}
                   {shooters.map((p, i) => (
                     <tr key={p.name} className="border-b border-border/40 hover:bg-primary/5">
                       <Td><span className="text-lg font-bold">{rankIcon(i)}</span></Td>
+                      <Td><span className="font-bold text-primary/90">{p.gang_faction || "—"}</span></Td>
                       <Td><span className="font-bold">{p.name}</span></Td>
                       <Td right><span className="text-emerald-400 font-bold">{p.W}</span></Td>
                       <Td right><span className="text-destructive font-bold">{p.L}</span></Td>
+                      <Td right><span className="text-amber-400 font-bold">{p.D}</span></Td>
                       <Td right>{p.P}</Td>
                       <Td right><span className="font-bold text-primary">{p.PTS}</span></Td>
                     </tr>
                   ))}
                 </tbody>
+
               </table>
             </Card>
           </TabsContent>
