@@ -19,12 +19,17 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import lslLogo from "@/assets/lsl-logo.png";
-import tileBattleAsset from "@/assets/tile-battle.jpg.asset.json";
-import tileVirtualAsset from "@/assets/tile-virtual.jpg.asset.json";
-import tileChallengesAsset from "@/assets/tile-challenges.jpg.asset.json";
+import tileBattle from "@/assets/tile-battle.jpg";
+import tileVirtual from "@/assets/tile-virtual.jpg";
+import tileChallenges from "@/assets/tile-challenges.jpg";
 import tileReferrals from "@/assets/tile-referrals.jpg";
-import tileUsersAsset from "@/assets/tile-users.jpg.asset.json";
-import tileClansAsset from "@/assets/tile-clans.jpg.asset.json";
+import tileUsers from "@/assets/tile-users.jpg";
+import tileClans from "@/assets/tile-clans.jpg";
+const tileBattleAsset = { url: tileBattle };
+const tileVirtualAsset = { url: tileVirtual };
+const tileChallengesAsset = { url: tileChallenges };
+const tileUsersAsset = { url: tileUsers };
+const tileClansAsset = { url: tileClans };
 import consoleHeaderBgAsset from "@/assets/console-header-bg.jpg.asset.json";
 import leagueSkullFire from "@/assets/league-skull-fire.jpg";
 import { Countdown } from "@/components/Countdown";
@@ -102,8 +107,9 @@ function AdminPage() {
 
   return (
     <Layout>
-      <main className="w-full min-h-[calc(100vh-3.5rem)]">
-        <div className={`mx-auto w-full ${activeTab === "analytics" ? "max-w-[1600px]" : "max-w-[1080px]"} px-3 sm:px-4 py-4 sm:py-6 space-y-4`}>
+      <main className="w-full min-h-[calc(100vh-3.5rem)] overflow-x-auto">
+        <div className={`mx-auto w-full min-w-[1280px] ${activeTab === "analytics" ? "max-w-[1600px]" : "max-w-[1280px]"} px-3 sm:px-4 py-4 sm:py-6 space-y-4`}>
+
           <div
             className="relative overflow-hidden rounded-2xl p-4 border border-primary/40 shadow-luxury bg-card"
             style={{ backgroundImage: `linear-gradient(90deg, rgba(8,14,10,0.95) 0%, rgba(8,14,10,0.78) 45%, rgba(8,14,10,0.25) 100%), url(${consoleHeaderBgAsset.url})`, backgroundSize: "cover", backgroundPosition: "center right" }}
@@ -2685,7 +2691,7 @@ function AnalyticsPanel() {
       </div>
 
       {/* ROW 9 — 5 module tiles */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
+      <div className="grid grid-cols-6 gap-3">
         {[
           { l: "VIRTUAL", s: "Manage virtual matches and rounds", t: "virtual", img: tileVirtualAsset.url },
           { l: "BATTLE", s: "Manage matches, fixtures and outcomes", t: "matches", img: tileBattleAsset.url },

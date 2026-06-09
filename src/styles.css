@@ -112,17 +112,37 @@
     overflow-x: hidden;
   }
   body {
-    background: var(--background);
+    background: #04130c;
     color: var(--foreground);
     font-family: var(--font-sans);
-    background-image: var(--gradient-glow), var(--gradient-luxury);
+    background-image:
+      radial-gradient(60% 50% at 12% 8%, oklch(0.40 0.18 158 / 0.18), transparent 60%),
+      radial-gradient(55% 45% at 92% 96%, oklch(0.35 0.16 160 / 0.16), transparent 65%),
+      linear-gradient(160deg, #02100a 0%, #06180f 50%, #03110a 100%);
+    background-attachment: fixed;
     min-height: 100vh;
     min-height: 100dvh;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     width: 100%;
+    position: relative;
   }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("/icon.svg");
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: min(70vw, 700px);
+    opacity: 0.05;
+    pointer-events: none;
+    z-index: 0;
+    filter: drop-shadow(0 0 40px rgba(0, 0, 0, 0.6));
+  }
+  body > * { position: relative; z-index: 1; }
   #root, main { min-width: 0; width: 100%; }
+
   img, video, canvas, svg { max-width: 100%; height: auto; }
   input, textarea, select { font-size: 16px; } /* prevent iOS zoom on focus */
   @supports (padding: env(safe-area-inset-top)) {
