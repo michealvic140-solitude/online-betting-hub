@@ -15,6 +15,7 @@ import { Spotlight } from "@/components/Spotlight";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
 import { Crosshair, Flame, Trophy, ChevronRight, Skull, Coins, Ticket as TicketIcon, ClipboardPaste, X } from "lucide-react";
+import { Countdown } from "@/components/Countdown";
 import hero from "@/assets/hero.jpg";
 import { fetchMatches, fetchSettings, type MatchRow } from "@/lib/queries";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,8 +60,10 @@ function Index() {
     return () => { supabase.removeChannel(ch); };
   }, []);
 
-  const live = matches.filter((m) => m.status === "live");
-  const upcoming = matches.filter((m) => m.status === "scheduled");
+  const futures = matches.filter((m) => m.match_kind === "future" && m.status === "scheduled");
+  const normalMatches = matches.filter((m) => m.match_kind !== "future");
+  const live = normalMatches.filter((m) => m.status === "live");
+  const upcoming = normalMatches.filter((m) => m.status === "scheduled");
   const featuredAll = matches.filter((m) => m.is_featured && m.status !== "ended");
   const featuredFallback = featuredAll.length === 0 && upcoming[0] ? [upcoming[0]] : featuredAll;
 
@@ -116,6 +119,7 @@ function Index() {
       <HighlightsRow />
       <AnnouncementSlider />
       <AdsRow />
+      <FuturesSection title={settings?.futures_section_title || "SEASONAL TOURNAMENT"} markets={futures} />
 
       <BookingCodeFab />
 

@@ -1089,7 +1089,7 @@ function MatchesPanel() {
   const [shooterWizard, setShooterWizard] = useState(false);
 
   async function load() {
-    const { data } = await supabase.from("matches").select("*, home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url), home_player:players!home_player_id(name,avatar_url), away_player:players!away_player_id(name,avatar_url)").eq("is_archived", false).neq("match_kind", "future").order("start_time", { ascending: false });
+    const { data } = await (supabase as any).from("matches").select("*, home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url), home_player:players!home_player_id(name,avatar_url), away_player:players!away_player_id(name,avatar_url)").eq("is_archived", false).neq("match_kind", "future").order("start_time", { ascending: false });
     setMatches(data ?? []);
   }
   useEffect(() => { load(); }, []);
@@ -1188,11 +1188,15 @@ async function settleBetsForMatch(matchId: string, winnerTeamId: string | null, 
   const { data: sels } = await supabase.from("bet_selections").select("*, markets!market_id(name), odds!odd_id(label)").eq("match_id", matchId);
   if (!sels || sels.length === 0) return;
   // Get team names for label comparison
-  const { data: match } = await supabase.from("matches").select("home_team_id, home_team:teams!home_team_id(name), away_team:teams!away_team_id(name), home_score, away_score").eq("id", matchId).single() as any;
+  const { data: match } = await (supabase as any).from("matches").select("home_team_id,away_team_id,home_player_id,away_player_id,match_kind,home_player:players!home_player_id(name),away_player:players!away_player_id(name),home_team:teams!home_team_id(name),away_team:teams!away_team_id(name),home_score,away_score").eq("id", matchId).single() as any;
   const hs = homeScore ?? Number(match?.home_score ?? 0);
   const as_ = awayScore ?? Number(match?.away_score ?? 0);
   const scoreLabel = `${hs}-${as_}`;
-  const winnerLabel = winnerTeamId === null ? "Draw" : (winnerTeamId === match?.home_team_id ? match?.home_team?.name : match?.away_team?.name);
+  const winnerLabel = winnerTeamId === null
+    ? "Draw"
+    : match?.match_kind === "shooter"
+    ? (winnerTeamId === match?.home_team_id ? match?.home_player?.name : match?.away_player?.name)
+    : (winnerTeamId === match?.home_team_id ? match?.home_team?.name : match?.away_team?.name);
   for (const s of sels) {
     const marketName = (s as any).markets?.name ?? "";
     const oddLabel = (s as any).odds?.label ?? "";
