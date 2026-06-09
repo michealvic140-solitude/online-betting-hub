@@ -47,8 +47,6 @@ function useForceReloadBroadcast() {
 export const Layout = ({ children }: { children: ReactNode }) => {
   const { user, profile, roles, isAdmin, isMod, signOut } = useAuth();
   const nav = useNavigate();
-  const chatUnread = useChatUnread();
-  useRegisterServiceWorker();
   useVirtualHeartbeat();
   useForceReloadBroadcast();
   const [railOpen, setRailOpen] = useState(false);
