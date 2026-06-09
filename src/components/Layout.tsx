@@ -70,7 +70,6 @@ export const Layout = ({ children }: { children: ReactNode }) => {
             <NavLink to="/matches" icon={MatchIcon} label="Matches" />
             <NavLink to="/virtual" icon={Dice5} label="Virtual" />
             <NavLink to="/leaderboard" icon={Trophy} label="Leaderboard" />
-            {user && <NavLink to="/chat" icon={MessageSquare} label="Chat" badge={chatUnread} />}
             {user && <NavLink to="/dashboard" icon={LayoutDashboard} label="Dashboard" />}
             {user && <NavLink to="/checkout" icon={Coins} label="Buy" />}
             {user && <NavLink to="/withdraw" icon={Wallet} label="Withdraw" />}
@@ -136,7 +135,6 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           <MobLink to="/leaderboard" icon={Trophy} label="Top" />
           {user && <>
             <MobLink to="/dashboard" icon={Ticket} label="Bets" />
-            <MobLink to="/chat" icon={MessageSquare} label="Chat" badge={chatUnread} />
             <MobLink to="/profile" icon={UserIcon} label="Profile" />
             <MobLink to="/settings" icon={SettingsIcon} label="Settings" />
             <MobLink to="/support" icon={LifeBuoy} label="Help" />
