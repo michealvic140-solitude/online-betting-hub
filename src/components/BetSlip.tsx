@@ -77,10 +77,11 @@ function BetSlipDrawer({ open, onClose }: { open: boolean; onClose: () => void }
   }, [open]);
 
   const isVirtualTicket = selections.length > 0 && selections.every((s) => s.is_virtual);
-  const isMixedTicket = selections.some((s) => s.is_virtual) && selections.some((s) => !s.is_virtual);
-  const minStake = isVirtualTicket ? virtMinStake : realMinStake;
+  const isFutureTicket = selections.length > 0 && selections.every((s) => s.is_future);
+  const isMixedTicket = new Set(selections.map((s) => s.is_virtual ? "virtual" : s.is_future ? "future" : "real")).size > 1;
+  const minStake = isVirtualTicket ? virtMinStake : isFutureTicket ? 1 : realMinStake;
   const maxPayout = isVirtualTicket ? virtMaxPayout : realMaxPayout;
-  const maxSel = isVirtualTicket ? maxSelVirt : maxSelReal;
+  const maxSel = isVirtualTicket ? maxSelVirt : isFutureTicket ? 1 : maxSelReal;
   const rawPayout = Math.floor(stake * totalOdds);
   const payout = Math.min(rawPayout, maxPayout);
   const capped = rawPayout > maxPayout;
@@ -89,10 +90,10 @@ function BetSlipDrawer({ open, onClose }: { open: boolean; onClose: () => void }
     if (!user || !profile) { nav({ to: "/login" }); return; }
     if (selections.length === 0) return;
     if (isMixedTicket) {
-      toast.error("Virtual and real match selections must be placed on separate slips.");
+      toast.error("Virtual, futures and real match selections must be placed on separate slips.");
       return;
     }
-    if (!isVirtualTicket && selections.length < 2) {
+    if (!isVirtualTicket && !isFutureTicket && selections.length < 2) {
       toast.error(`Add at least 2 selections to place a bet (you have ${selections.length}).`);
       return;
     }
@@ -167,7 +168,7 @@ function BetSlipDrawer({ open, onClose }: { open: boolean; onClose: () => void }
               {placed ? <CheckCircle2 className="h-5 w-5" /> : <Ticket className="h-5 w-5" />}
             </span>
             <span className="leading-tight">
-              <span className="block text-[10px] uppercase tracking-[0.3em] text-muted-foreground">{isVirtualTicket ? "Virtual ticket desk" : "Real match ticket desk"}</span>
+              <span className="block text-[10px] uppercase tracking-[0.3em] text-muted-foreground">{isVirtualTicket ? "Virtual ticket desk" : isFutureTicket ? "Futures ticket desk" : "Real match ticket desk"}</span>
               <span className="block text-2xl gradient-gold-text">{placed ? "Ticket Placed" : "Bet Slip"}</span>
             </span>
           </SheetTitle>
@@ -233,9 +234,9 @@ function BetSlipDrawer({ open, onClose }: { open: boolean; onClose: () => void }
             )}
             <div className="flex gap-2">
               <Button variant="outline" onClick={clear} className="flex-1"><Trash2 className="h-4 w-4 mr-1" />Clear</Button>
-              <Button className="btn-luxury flex-1" disabled={submitting || selections.length < 2} onClick={place}>{submitting ? "Placing…" : `Place Bet${selections.length < 2 ? ` (need ${2 - selections.length} more)` : ""}`}</Button>
+              <Button className="btn-luxury flex-1" disabled={submitting || (!isVirtualTicket && !isFutureTicket && selections.length < 2)} onClick={place}>{submitting ? "Placing…" : `Place Bet${(!isVirtualTicket && !isFutureTicket && selections.length < 2) ? ` (need ${2 - selections.length} more)` : ""}`}</Button>
             </div>
-            <p className="text-[10px] text-muted-foreground text-center">Minimum 2 selections required. Tokens are deducted on placement. Cash-out available only after the match ends and your bet wins.</p>
+            <p className="text-[10px] text-muted-foreground text-center">{isFutureTicket ? "Futures are single-pick tickets. Tokens are deducted on placement and paid after admin settlement." : "Minimum 2 selections required. Tokens are deducted on placement. Cash-out available only after the match ends and your bet wins."}</p>
           </div>
         )}
         </div>
