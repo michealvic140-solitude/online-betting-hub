@@ -183,7 +183,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      _lsl_bootstrap_exec: { Args: { _sql: string }; Returns: undefined }
     }
     Enums: {
       app_role:
