@@ -2761,11 +2761,11 @@ function AnalyticsPanel() {
         </Card>
       </div>
 
-      {/* ROW 7 — Recent Activity | Live Gang Wars | Highlights Hub */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      {/* ROW 7 — Recent Activity | Live Gang Wars + Event Countdown | Highlights Hub */}
+      <div className="grid grid-cols-[1.15fr_0.9fr_1.35fr] gap-3">
         <PanelBlock title="RECENT ACTIVITY" accent="sky" onView={() => setActiveTabFromAnalytics(nav, "activity")}>
           {activity.length === 0 && <div className="text-[10px] text-muted-foreground">No activity yet</div>}
-          {activity.slice(0, 3).map((a, i) => (
+          {activity.slice(0, 5).map((a, i) => (
             <button key={i} onClick={() => setActiveTabFromAnalytics(nav, "audit")} className="w-full text-left flex items-start gap-1.5 text-[9px] sm:text-xs py-1 border-b border-border/40 last:border-0 hover:bg-sky-500/10 rounded transition">
               <Sparkles className="h-3 w-3 text-sky-400 shrink-0 mt-0.5" />
               <div className="min-w-0 flex-1">
@@ -2775,23 +2775,33 @@ function AnalyticsPanel() {
             </button>
           ))}
         </PanelBlock>
-        <PanelBlock title="LIVE GANG WARS" accent="rose" onView={() => nav({ to: "/matches" })}>
-          {liveMatches.length === 0 && <div className="text-[10px] text-muted-foreground">No live wars</div>}
-          {liveMatches.slice(0, 3).map((m: any) => {
-            const home = m.home_team; const away = m.away_team;
-            const initial = (n?: string) => (n ? n.charAt(0).toUpperCase() : "?");
-            return (
-              <button key={m.id} onClick={() => nav({ to: "/matches/$matchId", params: { matchId: m.id } })} className="w-full flex items-center gap-1.5 text-[9px] sm:text-xs py-1 border-b border-border/40 last:border-0 hover:bg-rose-500/10 rounded px-1 transition">
-                {home?.logo_url ? <img src={home.logo_url} alt="" className="h-5 w-5 rounded-full object-cover border border-rose-500/40" /> : <div className="h-5 w-5 rounded-full bg-rose-500/20 grid place-items-center text-[8px] font-bold text-rose-300 border border-rose-500/40">{initial(home?.name)}</div>}
-                <div className="flex-1 min-w-0 text-center text-foreground font-semibold truncate">{home?.name ?? "Home"} <span className="text-muted-foreground">vs</span> {away?.name ?? "Away"}</div>
-                {away?.logo_url ? <img src={away.logo_url} alt="" className="h-5 w-5 rounded-full object-cover border border-rose-500/40" /> : <div className="h-5 w-5 rounded-full bg-rose-500/20 grid place-items-center text-[8px] font-bold text-rose-300 border border-rose-500/40">{initial(away?.name)}</div>}
+        <div className="space-y-3">
+          <PanelBlock title="LIVE GANG WARS" accent="rose" compact onView={() => nav({ to: "/matches" })}>
+            {liveMatches.length === 0 && <div className="text-[10px] text-muted-foreground">No live wars</div>}
+            {liveMatches.slice(0, 2).map((m: any) => {
+              const home = m.home_team; const away = m.away_team;
+              const initial = (n?: string) => (n ? n.charAt(0).toUpperCase() : "?");
+              return (
+                <button key={m.id} onClick={() => nav({ to: "/matches/$matchId", params: { matchId: m.id } })} className="w-full flex items-center gap-1.5 text-[9px] sm:text-xs py-1 border-b border-border/40 last:border-0 hover:bg-rose-500/10 rounded px-1 transition">
+                  {home?.logo_url ? <img src={home.logo_url} alt="" className="h-5 w-5 rounded-full object-cover border border-rose-500/40" /> : <div className="h-5 w-5 rounded-full bg-rose-500/20 grid place-items-center text-[8px] font-bold text-rose-300 border border-rose-500/40">{initial(home?.name)}</div>}
+                  <div className="flex-1 min-w-0 text-center text-foreground font-semibold truncate">{home?.name ?? "Home"} <span className="text-muted-foreground">vs</span> {away?.name ?? "Away"}</div>
+                  {away?.logo_url ? <img src={away.logo_url} alt="" className="h-5 w-5 rounded-full object-cover border border-rose-500/40" /> : <div className="h-5 w-5 rounded-full bg-rose-500/20 grid place-items-center text-[8px] font-bold text-rose-300 border border-rose-500/40">{initial(away?.name)}</div>}
+                </button>
+              );
+            })}
+          </PanelBlock>
+          <PanelBlock title="EVENT COUNTDOWN" compact onView={() => setActiveTabFromAnalytics(nav, "events")}>
+            {event ? (
+              <button onClick={() => setActiveTabFromAnalytics(nav, "events")} className="relative w-full text-left rounded p-1 transition space-y-1 overflow-hidden">
+                <div className="relative text-[9px] sm:text-xs font-bold text-primary truncate drop-shadow">{event.title}</div>
+                <div className="relative text-[10px] sm:text-sm font-mono text-amber-300 drop-shadow"><Countdown target={event.ends_at ?? event.starts_at} /></div>
               </button>
-            );
-          })}
-        </PanelBlock>
+            ) : <div className="text-[10px] text-muted-foreground">No active event</div>}
+          </PanelBlock>
+        </div>
         <PanelBlock title="HIGHLIGHTS HUB" accent="violet" onView={() => setActiveTabFromAnalytics(nav, "content")}>
           {highlights.length === 0 && <div className="text-[10px] text-muted-foreground">No highlights yet</div>}
-          {highlights.slice(0, 3).map((h) => (
+          {highlights.slice(0, 4).map((h) => (
             <button key={h.id} onClick={() => setActiveTabFromAnalytics(nav, "content")} className="w-full flex items-center gap-1.5 text-[9px] sm:text-xs py-1 border-b border-border/40 last:border-0 hover:bg-violet-500/10 rounded px-1 transition">
               {h.media_type === "video" ? <Play className="h-3 w-3 text-violet-400 shrink-0" /> : <ImageIcon className="h-3 w-3 text-violet-400 shrink-0" />}
               <div className="min-w-0 flex-1 truncate text-left">{h.title}</div>
@@ -2800,25 +2810,8 @@ function AnalyticsPanel() {
         </PanelBlock>
       </div>
 
-      {/* ROW 8 — Event Countdown | Broadcast Center | Quick Actions */}
+      {/* ROW 8 — Broadcast Center | Quick Actions | Top Bets */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <PanelBlock title="EVENT COUNTDOWN" compact onView={() => setActiveTabFromAnalytics(nav, "events")}>
-          {event ? (
-            <button onClick={() => setActiveTabFromAnalytics(nav, "events")} className="relative w-full text-left rounded p-1 transition space-y-1 overflow-hidden">
-              {event.banner_url && (
-                <>
-                  <img src={event.banner_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70 rounded" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/85 via-background/40 to-background/20 rounded" />
-                </>
-              )}
-              <div className="relative text-[9px] sm:text-xs font-bold text-primary truncate drop-shadow">{event.title}</div>
-              <div className="relative text-[10px] sm:text-sm font-mono text-amber-300 drop-shadow"><Countdown target={event.ends_at ?? event.starts_at} /></div>
-              <div className="relative text-[7px] sm:text-[9px] text-muted-foreground tabular-nums">{(() => { const d = new Date(event.starts_at ?? event.ends_at); const p = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}:${p(d.getMonth()+1)}:${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; })()}</div>
-            </button>
-          ) : (
-            <div className="text-[10px] text-muted-foreground">No active event</div>
-          )}
-        </PanelBlock>
         <PanelBlock title="BROADCAST CENTER" compact onView={() => setActiveTabFromAnalytics(nav, "broadcast")}>
           {broadcasts.length === 0 && <div className="text-[10px] text-muted-foreground">No broadcasts</div>}
           {broadcasts.map((b) => (
@@ -2897,6 +2890,7 @@ function AnalyticsPanel() {
             </div>
           </div>
         </PanelBlock>
+        <TopBetsPanel />
       </div>
 
       {/* ROW 9 — 5 module tiles */}
@@ -2921,9 +2915,6 @@ function AnalyticsPanel() {
           </Card>
         ))}
       </div>
-
-      {/* ROW 10 — System Status */}
-      <TopBetsPanel />
 
       <Card className="border-primary/20 bg-card/60 p-3">
         <div className="text-[10px] sm:text-xs font-bold tracking-widest text-primary mb-2">SYSTEM STATUS <span className="text-muted-foreground font-normal">(COMING SOON)</span></div>
