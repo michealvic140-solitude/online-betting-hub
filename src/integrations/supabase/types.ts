@@ -2564,6 +2564,10 @@ export type Database = {
         Returns: undefined
       }
       admin_pnl_summary: { Args: { _days?: number }; Returns: Json }
+      admin_refund_bet: {
+        Args: { _bet_id: string; _reason?: string }
+        Returns: undefined
+      }
       admin_review_virtual_payout: {
         Args: { _approve: boolean; _id: string; _reason?: string }
         Returns: Json
