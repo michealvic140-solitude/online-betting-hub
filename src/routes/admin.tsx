@@ -107,8 +107,8 @@ function AdminPage() {
 
   return (
     <Layout>
-      <main className="w-full min-h-[calc(100vh-3.5rem)] overflow-x-auto">
-        <div className={`mx-auto w-full min-w-[1280px] ${activeTab === "analytics" ? "max-w-[1600px]" : "max-w-[1280px]"} px-3 sm:px-4 py-4 sm:py-6 space-y-4`}>
+      <main className="w-full min-h-[calc(100vh-3.5rem)] overflow-x-hidden">
+        <div className="mx-auto w-full max-w-[1280px] px-3 sm:px-4 py-4 sm:py-6 space-y-4">
 
           <div
             className="relative overflow-hidden rounded-2xl p-4 border border-primary/40 shadow-luxury bg-card"
@@ -156,6 +156,7 @@ function AdminPage() {
             <TabsContent value="bannedusers" className="mt-4"><BannedUsersPanel /></TabsContent>
             <TabsContent value="virtual" className="mt-4"><VirtualAdminPanel /></TabsContent>
             <TabsContent value="matches" className="mt-4"><MatchesPanel /></TabsContent>
+            <TabsContent value="futures" className="mt-4"><FuturesAdminPanel /></TabsContent>
             <TabsContent value="events" className="mt-4"><EventsPanel /></TabsContent>
             <TabsContent value="tokens" className="mt-4"><TokensPanel /></TabsContent>
             <TabsContent value="tokenmovement" className="mt-4"><TokenMovementPanel /></TabsContent>
