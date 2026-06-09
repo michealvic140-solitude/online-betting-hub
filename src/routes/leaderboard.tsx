@@ -57,7 +57,7 @@ function Page() {
       // Real (non-virtual) finished matches only — virtual rounds never count.
       const { data: matches } = await supabase
         .from("matches")
-        .select("home_team_id,away_team_id,home_score,away_score,winner_team_id,status,is_virtual,settled_at,created_at")
+        .select("home_team_id,away_team_id,home_player_id,away_player_id,home_score,away_score,winner_team_id,status,is_virtual,match_kind,settled_at,created_at")
         .eq("status", "ended")
         .eq("is_virtual", false);
       const { data: teams } = await supabase.from("teams").select("id,name");
@@ -65,8 +65,14 @@ function Page() {
       const { data: overrides } = await supabase.from("leaderboard_overrides").select("*");
 
       const teamMap = new Map<string, string>(); (teams ?? []).forEach((t) => teamMap.set(t.id, t.name));
+      const playerMap = new Map<string, any>(); (players ?? []).forEach((p) => playerMap.set(p.id, p));
       const teamPlayers = new Map<string, string[]>();
-      (players ?? []).forEach((p) => { const a = teamPlayers.get(p.team_id) ?? []; a.push(p.name); teamPlayers.set(p.team_id, a); });
+      (players ?? []).forEach((p) => {
+        if (!p.team_id) return;
+        const a = teamPlayers.get(p.team_id) ?? [];
+        a.push(p.name);
+        teamPlayers.set(p.team_id, a);
+      });
 
       const gangAgg = new Map<string, Stats>();
       const playerAgg = new Map<string, Stats>();
@@ -83,6 +89,25 @@ function Page() {
         const countForGangs = ts >= gangsReset;
         const countForShooters = ts >= shootersReset;
         if (!countForGangs && !countForShooters) return;
+        if (m.match_kind === "future") return;
+        if (m.match_kind === "shooter") {
+          if (!countForShooters) return;
+          const draw = Number(m.home_score ?? 0) === Number(m.away_score ?? 0);
+          const winnerPlayerId = draw ? null : Number(m.home_score ?? 0) > Number(m.away_score ?? 0) ? m.home_player_id : m.away_player_id;
+          for (const pid of [m.home_player_id, m.away_player_id]) {
+            const pl = pid ? playerMap.get(pid) : null;
+            if (!pl?.name) continue;
+            const tname = pl.team_id ? (teamMap.get(pl.team_id) || "—") : "—";
+            const pc = playerAgg.get(pl.name) ?? { name: pl.name, gang_faction: tname, W: 0, L: 0, D: 0, PTS: 0, P: 0 };
+            pc.gang_faction = tname;
+            pc.P += 1;
+            if (draw) { pc.D += 1; pc.PTS += 1; }
+            else if (winnerPlayerId === pid) { pc.W += 1; pc.PTS += 3; }
+            else { pc.L += 1; }
+            playerAgg.set(pl.name, pc);
+          }
+          return;
+        }
         for (const side of ["home", "away"] as const) {
           const tid = side === "home" ? m.home_team_id : m.away_team_id;
           const tname = teamMap.get(tid) || "Team";

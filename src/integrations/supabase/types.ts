@@ -85,6 +85,9 @@ export type Database = {
           exposure_warn_pct: number
           force_reload_at: string | null
           friends_enabled: boolean
+          futures_max_payout: number
+          futures_min_stake: number
+          futures_section_title: string
           gift_daily_limit: number
           gift_enabled: boolean
           gift_fee_pct: number
@@ -159,6 +162,9 @@ export type Database = {
           exposure_warn_pct?: number
           force_reload_at?: string | null
           friends_enabled?: boolean
+          futures_max_payout?: number
+          futures_min_stake?: number
+          futures_section_title?: string
           gift_daily_limit?: number
           gift_enabled?: boolean
           gift_fee_pct?: number
@@ -233,6 +239,9 @@ export type Database = {
           exposure_warn_pct?: number
           force_reload_at?: string | null
           friends_enabled?: boolean
+          futures_max_payout?: number
+          futures_min_stake?: number
+          futures_section_title?: string
           gift_daily_limit?: number
           gift_enabled?: boolean
           gift_fee_pct?: number
@@ -964,11 +973,13 @@ export type Database = {
       }
       matches: {
         Row: {
+          away_player_id: string | null
           away_score: number
           away_team_id: string
           category_id: string | null
           created_at: string
           created_by: string | null
+          home_player_id: string | null
           home_score: number
           home_team_id: string
           id: string
@@ -979,6 +990,8 @@ export type Database = {
           lock_time: string | null
           locked_at: string | null
           locked_by: string | null
+          marketing_enabled: boolean
+          match_kind: string
           name: string
           settled_at: string | null
           settled_by: string | null
@@ -991,11 +1004,13 @@ export type Database = {
           winner_team_id: string | null
         }
         Insert: {
+          away_player_id?: string | null
           away_score?: number
           away_team_id: string
           category_id?: string | null
           created_at?: string
           created_by?: string | null
+          home_player_id?: string | null
           home_score?: number
           home_team_id: string
           id?: string
@@ -1006,6 +1021,8 @@ export type Database = {
           lock_time?: string | null
           locked_at?: string | null
           locked_by?: string | null
+          marketing_enabled?: boolean
+          match_kind?: string
           name: string
           settled_at?: string | null
           settled_by?: string | null
@@ -1018,11 +1035,13 @@ export type Database = {
           winner_team_id?: string | null
         }
         Update: {
+          away_player_id?: string | null
           away_score?: number
           away_team_id?: string
           category_id?: string | null
           created_at?: string
           created_by?: string | null
+          home_player_id?: string | null
           home_score?: number
           home_team_id?: string
           id?: string
@@ -1033,6 +1052,8 @@ export type Database = {
           lock_time?: string | null
           locked_at?: string | null
           locked_by?: string | null
+          marketing_enabled?: boolean
+          match_kind?: string
           name?: string
           settled_at?: string | null
           settled_by?: string | null
@@ -1046,6 +1067,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "matches_away_player_id_fkey"
+            columns: ["away_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "matches_away_team_id_fkey"
             columns: ["away_team_id"]
             isOneToOne: false
@@ -1057,6 +1085,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_home_player_id_fkey"
+            columns: ["home_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
             referencedColumns: ["id"]
           },
           {
@@ -1204,7 +1239,7 @@ export type Database = {
           is_substitute: boolean
           name: string
           position: string | null
-          team_id: string
+          team_id: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -1213,7 +1248,7 @@ export type Database = {
           is_substitute?: boolean
           name: string
           position?: string | null
-          team_id: string
+          team_id?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -1222,7 +1257,7 @@ export type Database = {
           is_substitute?: boolean
           name?: string
           position?: string | null
-          team_id?: string
+          team_id?: string | null
         }
         Relationships: [
           {
