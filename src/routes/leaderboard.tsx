@@ -91,7 +91,8 @@ function Page() {
           }
           if (countForShooters) {
             (teamPlayers.get(tid) ?? []).forEach((pname) => {
-              const pc = playerAgg.get(pname) ?? { name: pname, W: 0, L: 0, D: 0, PTS: 0, P: 0 };
+              const pc = playerAgg.get(pname) ?? { name: pname, gang_faction: tname, W: 0, L: 0, D: 0, PTS: 0, P: 0 };
+              pc.gang_faction = pc.gang_faction || tname;
               pc.P += 1;
               if (draw) { pc.D += 1; pc.PTS += 1; }
               else if (won) { pc.W += 1; pc.PTS += 3; }
