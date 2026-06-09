@@ -70,6 +70,13 @@ function Page() {
 
       const gangAgg = new Map<string, Stats>();
       const playerAgg = new Map<string, Stats>();
+      // Seed all known shooters so they appear on the board even with zero stats.
+      (players ?? []).forEach((p) => {
+        if (!p.name) return;
+        const tname = p.team_id ? (teamMap.get(p.team_id) || "") : "";
+        playerAgg.set(p.name, { name: p.name, gang_faction: tname || "—", W: 0, L: 0, D: 0, PTS: 0, P: 0 });
+      });
+
 
       (matches ?? []).forEach((m: any) => {
         const ts = new Date(m.settled_at ?? m.created_at ?? 0).getTime();
