@@ -57,6 +57,8 @@ function BetSlipDrawer({ open, onClose }: { open: boolean; onClose: () => void }
   const [realMaxPayout, setRealMaxPayout] = useState(100_000_000);
   const [virtMinStake, setVirtMinStake] = useState(100_000);
   const [virtMaxPayout, setVirtMaxPayout] = useState(100_000_000);
+  const [futureMinStake, setFutureMinStake] = useState(1);
+  const [futureMaxPayout, setFutureMaxPayout] = useState(100_000_000);
   const [maxSelReal, setMaxSelReal] = useState(20);
   const [maxSelVirt, setMaxSelVirt] = useState(20);
   const [submitting, setSubmitting] = useState(false);
@@ -65,7 +67,7 @@ function BetSlipDrawer({ open, onClose }: { open: boolean; onClose: () => void }
   const nav = useNavigate();
 
   useEffect(() => {
-    supabase.from("app_settings").select("min_stake,max_payout,virtual_min_stake,virtual_max_payout,max_selections_per_ticket,virtual_max_selections").eq("id", 1).maybeSingle()
+    supabase.from("app_settings").select("min_stake,max_payout,virtual_min_stake,virtual_max_payout,max_selections_per_ticket,virtual_max_selections,futures_min_stake,futures_max_payout").eq("id", 1).maybeSingle()
       .then(({ data }) => {
         if (data?.min_stake) setRealMinStake(Number(data.min_stake));
         if ((data as any)?.max_payout) setRealMaxPayout(Number((data as any).max_payout));
@@ -73,14 +75,16 @@ function BetSlipDrawer({ open, onClose }: { open: boolean; onClose: () => void }
         if ((data as any)?.virtual_max_payout) setVirtMaxPayout(Number((data as any).virtual_max_payout));
         if ((data as any)?.max_selections_per_ticket) setMaxSelReal(Number((data as any).max_selections_per_ticket));
         if ((data as any)?.virtual_max_selections) setMaxSelVirt(Number((data as any).virtual_max_selections));
+        if ((data as any)?.futures_min_stake) setFutureMinStake(Number((data as any).futures_min_stake));
+        if ((data as any)?.futures_max_payout) setFutureMaxPayout(Number((data as any).futures_max_payout));
       });
   }, [open]);
 
   const isVirtualTicket = selections.length > 0 && selections.every((s) => s.is_virtual);
   const isFutureTicket = selections.length > 0 && selections.every((s) => s.is_future);
   const isMixedTicket = new Set(selections.map((s) => s.is_virtual ? "virtual" : s.is_future ? "future" : "real")).size > 1;
-  const minStake = isVirtualTicket ? virtMinStake : isFutureTicket ? 1 : realMinStake;
-  const maxPayout = isVirtualTicket ? virtMaxPayout : realMaxPayout;
+  const minStake = isVirtualTicket ? virtMinStake : isFutureTicket ? futureMinStake : realMinStake;
+  const maxPayout = isVirtualTicket ? virtMaxPayout : isFutureTicket ? futureMaxPayout : realMaxPayout;
   const maxSel = isVirtualTicket ? maxSelVirt : isFutureTicket ? 1 : maxSelReal;
   const rawPayout = Math.floor(stake * totalOdds);
   const payout = Math.min(rawPayout, maxPayout);
