@@ -1227,6 +1227,29 @@ async function settleBetsForMatch(matchId: string, winnerTeamId: string | null, 
   }
 }
 
+async function settleFutureBets(matchId: string, winningOddId: string, winningLabel: string) {
+  const { data: sels } = await supabase.from("bet_selections").select("*").eq("match_id", matchId);
+  if (!sels || sels.length === 0) return;
+  for (const s of sels) {
+    await supabase.from("bet_selections").update({ result: s.odd_id === winningOddId ? "won" : "lost" }).eq("id", s.id);
+  }
+  const betIds = Array.from(new Set(sels.map((s: any) => s.bet_id)));
+  for (const bid of betIds) {
+    const { data: betSels } = await supabase.from("bet_selections").select("result").eq("bet_id", bid);
+    if (!betSels || betSels.some((s: any) => !s.result)) continue;
+    const allWon = betSels.every((s: any) => s.result === "won");
+    const { data: bet } = await supabase.from("bets").select("*").eq("id", bid).single();
+    if (!bet || ["suspended", "refunded", "void", "cashed_out"].includes(bet.status)) continue;
+    if (allWon) {
+      const { error } = await supabase.rpc("settle_pay_winning_bet", { _bet_id: bid });
+      if (error) toast.error(`Could not credit ${bet.tracking_id}: ${error.message}`);
+    } else {
+      await supabase.from("bets").update({ status: "lost", settled_at: new Date().toISOString() }).eq("id", bid);
+      await supabase.from("notifications").insert({ user_id: bet.user_id, title: "Future bet lost", body: `Your ticket ${bet.tracking_id} did not match ${winningLabel}.`, link: `/ticket/${bid}` });
+    }
+  }
+}
+
 function ShooterMatchWizard({ onClose }: { onClose: () => void }) {
   const [players, setPlayers] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
