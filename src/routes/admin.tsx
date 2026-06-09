@@ -1227,6 +1227,91 @@ async function settleBetsForMatch(matchId: string, winnerTeamId: string | null, 
   }
 }
 
+function ShooterMatchWizard({ onClose }: { onClose: () => void }) {
+  const [players, setPlayers] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
+  const [form, setForm] = useState({ home_player_id: "", away_player_id: "", oddsA: 2, draw: 3.5, oddsB: 2, name: "", start_time: "", location: "", featured: true, marketing: true });
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("players").select("id,name,avatar_url,team_id,teams!team_id(name)").order("name"),
+      supabase.from("teams").select("id,name,logo_url").order("name"),
+    ]).then(([p, t]) => { setPlayers(p.data ?? []); setTeams(t.data ?? []); });
+  }, []);
+
+  async function create() {
+    if (!form.home_player_id || !form.away_player_id) { toast.error("Pick two shooters"); return; }
+    if (form.home_player_id === form.away_player_id) { toast.error("Choose two different shooters"); return; }
+    const home = players.find((p) => p.id === form.home_player_id);
+    const away = players.find((p) => p.id === form.away_player_id);
+    const homeTeamId = home?.team_id || teams[0]?.id;
+    const awayTeamId = away?.team_id || teams.find((t) => t.id !== homeTeamId)?.id || homeTeamId;
+    if (!homeTeamId || !awayTeamId) { toast.error("Create at least one team in Clan first, then seed shooters freely with or without team tag."); return; }
+    const { data: m, error } = await supabase.from("matches").insert({
+      name: form.name || `${home?.name} vs ${away?.name}`,
+      home_team_id: homeTeamId,
+      away_team_id: awayTeamId,
+      home_player_id: form.home_player_id,
+      away_player_id: form.away_player_id,
+      match_kind: "shooter",
+      marketing_enabled: form.marketing,
+      is_featured: form.featured,
+      location: form.location || "Shooter 1v1",
+      start_time: form.start_time ? new Date(form.start_time).toISOString() : new Date().toISOString(),
+      status: "scheduled",
+    } as any).select().single();
+    if (error) { toast.error(error.message); return; }
+    const { data: market } = await supabase.from("markets").insert({ match_id: m.id, name: "Shooter Winner" }).select().single();
+    if (market) await supabase.from("odds").insert([
+      { market_id: market.id, label: home?.name ?? "Shooter A", value: form.oddsA },
+      { market_id: market.id, label: "Draw", value: form.draw },
+      { market_id: market.id, label: away?.name ?? "Shooter B", value: form.oddsB },
+    ]);
+    await logAudit("shooter_match_created", "match", m.id, { home_player: home?.name, away_player: away?.name, marketing: form.marketing });
+    toast.success("Shooter match posted with odds");
+    onClose();
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><Crosshair className="h-5 w-5 text-primary" />Shooter Match — 1v1 Marketing Odds</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <ShooterSelect label="Shooter A" value={form.home_player_id} players={players} onChange={(v) => setForm({ ...form, home_player_id: v })} />
+            <ShooterSelect label="Shooter B" value={form.away_player_id} players={players} onChange={(v) => setForm({ ...form, away_player_id: v })} />
+            <div><label className="text-xs text-muted-foreground">Shooter A odds</label><Input type="number" step="0.01" min={1.01} value={form.oddsA} onChange={(e) => setForm({ ...form, oddsA: Number(e.target.value) })} /></div>
+            <div><label className="text-xs text-muted-foreground">Draw odds</label><Input type="number" step="0.01" min={1.01} value={form.draw} onChange={(e) => setForm({ ...form, draw: Number(e.target.value) })} /></div>
+            <div><label className="text-xs text-muted-foreground">Shooter B odds</label><Input type="number" step="0.01" min={1.01} value={form.oddsB} onChange={(e) => setForm({ ...form, oddsB: Number(e.target.value) })} /></div>
+            <div><label className="text-xs text-muted-foreground">Start time</label><Input type="datetime-local" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} /></div>
+          </div>
+          <Input placeholder="Marketing title (optional)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <Input placeholder="Location / stream / venue" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <label className="flex items-center gap-2 rounded-lg border border-primary/20 bg-card/60 p-3"><Switch checked={form.featured} onCheckedChange={(v) => setForm({ ...form, featured: v })} />Feature on homepage</label>
+            <label className="flex items-center gap-2 rounded-lg border border-accent/20 bg-card/60 p-3"><Switch checked={form.marketing} onCheckedChange={(v) => setForm({ ...form, marketing: v })} />Post for marketing</label>
+          </div>
+        </div>
+        <DialogFooter><Button variant="outline" onClick={onClose}>Cancel</Button><Button className="btn-luxury" onClick={create}>Create Shooter Match</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ShooterSelect({ label, value, players, onChange }: { label: string; value: string; players: any[]; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <label className="text-xs text-muted-foreground">{label}</label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger><SelectValue placeholder="Pick seeded shooter" /></SelectTrigger>
+        <SelectContent>
+          {players.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}{p.teams?.name ? ` · ${p.teams.name}` : " · Free agent"}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 function MatchWizard({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(1);
   const [teams, setTeams] = useState<any[]>([]);
