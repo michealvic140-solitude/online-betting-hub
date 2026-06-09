@@ -14,7 +14,170 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      advertisements: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          link_url: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          link_url?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          link_url?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      announcements: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          title: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          title: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          title?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      highlights: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          media_type: string
+          media_url: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          media_type?: string
+          media_url: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          media_type?: string
+          media_url?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      players: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          is_substitute: boolean
+          name: string
+          position: string | null
+          team_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          is_substitute?: boolean
+          name: string
+          position?: string | null
+          team_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          is_substitute?: boolean
+          name?: string
+          position?: string | null
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "players_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          gang_type: Database["public"]["Enums"]["gang_type"] | null
+          id: string
+          logo_url: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          gang_type?: Database["public"]["Enums"]["gang_type"] | null
+          id?: string
+          logo_url?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string
+          gang_type?: Database["public"]["Enums"]["gang_type"] | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +186,19 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "viewer"
+        | "shooter"
+        | "gang_leader"
+        | "registered"
+        | "moderator"
+        | "admin"
+      bet_status: "open" | "won" | "lost" | "cashed_out" | "void"
+      chat_room: "general" | "gang" | "moderator"
+      gang_type: "G" | "F"
+      match_status: "scheduled" | "live" | "ended" | "cancelled"
+      ticket_status: "open" | "pending" | "resolved" | "closed"
+      token_request_status: "pending" | "approved" | "denied"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +325,21 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "viewer",
+        "shooter",
+        "gang_leader",
+        "registered",
+        "moderator",
+        "admin",
+      ],
+      bet_status: ["open", "won", "lost", "cashed_out", "void"],
+      chat_room: ["general", "gang", "moderator"],
+      gang_type: ["G", "F"],
+      match_status: ["scheduled", "live", "ended", "cancelled"],
+      ticket_status: ["open", "pending", "resolved", "closed"],
+      token_request_status: ["pending", "approved", "denied"],
+    },
   },
 } as const
