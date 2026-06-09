@@ -107,8 +107,9 @@ function AdminPage() {
 
   return (
     <Layout>
-      <main className="w-full min-h-[calc(100vh-3.5rem)]">
-        <div className={`mx-auto w-full ${activeTab === "analytics" ? "max-w-[1600px]" : "max-w-[1080px]"} px-3 sm:px-4 py-4 sm:py-6 space-y-4`}>
+      <main className="w-full min-h-[calc(100vh-3.5rem)] overflow-x-auto">
+        <div className={`mx-auto w-full min-w-[1280px] ${activeTab === "analytics" ? "max-w-[1600px]" : "max-w-[1280px]"} px-3 sm:px-4 py-4 sm:py-6 space-y-4`}>
+
           <div
             className="relative overflow-hidden rounded-2xl p-4 border border-primary/40 shadow-luxury bg-card"
             style={{ backgroundImage: `linear-gradient(90deg, rgba(8,14,10,0.95) 0%, rgba(8,14,10,0.78) 45%, rgba(8,14,10,0.25) 100%), url(${consoleHeaderBgAsset.url})`, backgroundSize: "cover", backgroundPosition: "center right" }}
