@@ -1312,6 +1312,101 @@ function ShooterSelect({ label, value, players, onChange }: { label: string; val
   );
 }
 
+function FuturesAdminPanel() {
+  const [settings, setSettings] = useState({ futures_section_title: "SEASONAL TOURNAMENT", futures_min_stake: 1, futures_max_payout: 100000000 });
+  const [futures, setFutures] = useState<any[]>([]);
+  const [draft, setDraft] = useState({ title: "Gang of the Season / Champion", closes_at: "", options: "", min_stake: 1, max_payout: 100000000 });
+
+  async function load() {
+    const [{ data: s }, { data: f }] = await Promise.all([
+      supabase.from("app_settings").select("futures_section_title,futures_min_stake,futures_max_payout").eq("id", 1).maybeSingle(),
+      supabase.from("matches").select("*, markets(id,name,is_open,odds(id,label,value,is_winner,market_id))").eq("match_kind", "future").eq("is_archived", false).order("start_time", { ascending: false }),
+    ]);
+    if (s) setSettings({ futures_section_title: (s as any).futures_section_title ?? "SEASONAL TOURNAMENT", futures_min_stake: Number((s as any).futures_min_stake ?? 1), futures_max_payout: Number((s as any).futures_max_payout ?? 100000000) });
+    setFutures(f ?? []);
+  }
+  useEffect(() => { load(); }, []);
+
+  async function ensureFutureTeams() {
+    const { data } = await supabase.from("teams").select("id,name").in("name", ["LSL Futures", "Season Field"]);
+    let a = data?.find((t) => t.name === "LSL Futures")?.id;
+    let b = data?.find((t) => t.name === "Season Field")?.id;
+    if (!a) { const { data: row } = await supabase.from("teams").insert({ name: "LSL Futures" }).select("id").single(); a = row?.id; }
+    if (!b) { const { data: row } = await supabase.from("teams").insert({ name: "Season Field" }).select("id").single(); b = row?.id; }
+    return { a, b };
+  }
+  async function saveSettings() {
+    const { error } = await supabase.from("app_settings").update(settings as any).eq("id", 1);
+    if (error) toast.error(error.message); else toast.success("Futures settings saved");
+  }
+  async function createFuture() {
+    const options = draft.options.split("\n").map((line) => {
+      const [label, odd] = line.split(/[,|@]/).map((x) => x.trim());
+      return { label, value: Number(odd) };
+    }).filter((x) => x.label && Number.isFinite(x.value) && x.value >= 1.01);
+    if (!draft.title.trim() || !draft.closes_at || options.length < 2) { toast.error("Add title, close date, and at least two outcomes like: Spain, 5.50"); return; }
+    const ids = await ensureFutureTeams();
+    if (!ids.a || !ids.b) { toast.error("Could not prepare futures teams"); return; }
+    const { data: m, error } = await supabase.from("matches").insert({
+      name: draft.title.trim(), home_team_id: ids.a, away_team_id: ids.b, match_kind: "future", is_featured: true, marketing_enabled: true,
+      location: "Seasonal Tournament Futures", start_time: new Date(draft.closes_at).toISOString(), status: "scheduled",
+    } as any).select().single();
+    if (error) { toast.error(error.message); return; }
+    const { data: market } = await supabase.from("markets").insert({ match_id: m.id, name: draft.title.trim() }).select().single();
+    if (market) await supabase.from("odds").insert(options.map((o) => ({ market_id: market.id, label: o.label, value: o.value })));
+    await supabase.from("app_settings").update({ futures_min_stake: draft.min_stake, futures_max_payout: draft.max_payout } as any).eq("id", 1);
+    await logAudit("future_market_created", "match", m.id, { title: draft.title, options: options.length });
+    toast.success("Futures market created");
+    setDraft({ title: "Gang of the Season / Champion", closes_at: "", options: "", min_stake: draft.min_stake, max_payout: draft.max_payout });
+    load();
+  }
+  async function updateOdd(oddId: string, value: number) {
+    await supabase.from("odds").update({ value } as any).eq("id", oddId);
+    load();
+  }
+  async function settleFuture(match: any, odd: any) {
+    if (!confirm(`Settle ${match.name} with winner: ${odd.label}?`)) return;
+    await supabase.from("odds").update({ is_winner: false }).eq("market_id", odd.market_id);
+    await supabase.from("odds").update({ is_winner: true }).eq("id", odd.id);
+    await supabase.from("markets").update({ is_open: false }).eq("match_id", match.id);
+    await supabase.from("matches").update({ status: "ended", settled_at: new Date().toISOString() } as any).eq("id", match.id);
+    await settleFutureBets(match.id, odd.id, odd.label);
+    await logAudit("future_market_settled", "match", match.id, { winner: odd.label });
+    toast.success("Future settled and tickets updated");
+    load();
+  }
+  async function archiveFuture(id: string) {
+    if (!confirm("Archive this futures market?")) return;
+    await supabase.from("matches").update({ is_archived: true }).eq("id", id);
+    load();
+  }
+
+  return (
+    <div className="grid lg:grid-cols-[420px_1fr] gap-4">
+      <Card className="glass-strong p-4 space-y-3">
+        <div className="font-bold flex items-center gap-2"><Target className="h-4 w-4 text-primary" />Futures Betting Control</div>
+        <Input value={settings.futures_section_title} onChange={(e) => setSettings({ ...settings, futures_section_title: e.target.value })} placeholder="Homepage section name" />
+        <div className="grid grid-cols-2 gap-2"><Input type="number" value={settings.futures_min_stake} onChange={(e) => setSettings({ ...settings, futures_min_stake: Number(e.target.value) })} /><Input type="number" value={settings.futures_max_payout} onChange={(e) => setSettings({ ...settings, futures_max_payout: Number(e.target.value) })} /></div>
+        <Button variant="outline" onClick={saveSettings}>Save Section Settings</Button>
+        <div className="h-px bg-border" />
+        <Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Market title" />
+        <Input type="datetime-local" value={draft.closes_at} onChange={(e) => setDraft({ ...draft, closes_at: e.target.value })} />
+        <Textarea rows={8} value={draft.options} onChange={(e) => setDraft({ ...draft, options: e.target.value })} placeholder={"One option per line:\nGang A, 5.50\nTop Shooter, 8.00\nBest Clan, 10.00"} />
+        <div className="grid grid-cols-2 gap-2"><Input type="number" min={1} value={draft.min_stake} onChange={(e) => setDraft({ ...draft, min_stake: Number(e.target.value) })} /><Input type="number" min={1} value={draft.max_payout} onChange={(e) => setDraft({ ...draft, max_payout: Number(e.target.value) })} /></div>
+        <Button className="btn-luxury w-full" onClick={createFuture}><Plus className="h-4 w-4 mr-1" />Create Futures Market</Button>
+      </Card>
+      <div className="space-y-3">
+        {futures.map((f) => (
+          <Card key={f.id} className="glass p-4 space-y-3">
+            <div className="flex items-start gap-2"><div className="min-w-0 flex-1"><div className="font-bold text-lg truncate">{f.name}</div><div className="text-xs text-muted-foreground">Closes {new Date(f.start_time).toLocaleString()} · {f.status}</div></div><Button size="sm" variant="destructive" onClick={() => archiveFuture(f.id)}><Trash2 className="h-3 w-3" /></Button></div>
+            {(f.markets ?? []).map((m: any) => <div key={m.id} className="grid grid-cols-2 md:grid-cols-3 gap-2">{(m.odds ?? []).map((o: any) => <div key={o.id} className="rounded-lg border border-primary/20 bg-card/60 p-2"><div className="text-xs font-bold truncate">{o.label}</div><Input className="h-8 my-2" type="number" step="0.01" value={Number(o.value)} onChange={(e) => updateOdd(o.id, Number(e.target.value))} /><Button size="sm" className="w-full" disabled={f.status === "ended"} onClick={() => settleFuture(f, o)}>{o.is_winner ? "Winner" : "Settle"}</Button></div>)}</div>)}
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MatchWizard({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(1);
   const [teams, setTeams] = useState<any[]>([]);
