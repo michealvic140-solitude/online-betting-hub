@@ -2837,6 +2837,7 @@ function AnalyticsPanel() {
                 { i: Sparkles, l: "Challenges", t: "challenges" },
                 { i: MessageSquare, l: "Chat", t: "chat" },
                 { i: Megaphone, l: "Content", t: "content" },
+                { i: Target, l: "Futures", t: "futures" },
                 { i: Trophy, l: "Emblems", t: "emblems" },
                 { i: Calendar, l: "Events", t: "events" },
                 { i: Wallet, l: "House Wallet", t: "housewallet" },

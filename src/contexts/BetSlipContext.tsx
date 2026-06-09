@@ -53,6 +53,7 @@ export const BetSlipProvider = ({ children }: { children: ReactNode }) => {
   const add = (s: SlipSelection) =>
     setSelections((prev) => {
       if (s.is_future) return [s];
+      if (prev.some((x) => x.is_future)) return [s];
       const filtered = prev.filter((x) => x.match_id !== s.match_id);
       const next = [...filtered, s];
       return next;
