@@ -353,6 +353,30 @@ export function BetVoucher({ bet, sels, statusBadge, allWon, copy, shareCode }: 
   );
 }
 
+function FutureTicketProgress({ odd }: { odd: any }) {
+  const progress = Array.isArray(odd?.future_progress) ? odd.future_progress : [];
+  const status = odd?.future_status ?? "active";
+  const steps = progress.length ? progress : [{ status, title: odd?.future_next_title || "Tournament active", at: odd?.future_next_at }];
+  return (
+    <div className="mt-3 rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3">
+      <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+        <span>Progress tree</span>
+        <span className="text-primary font-bold">{status}</span>
+      </div>
+      <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1">
+        {steps.map((step: any, i: number) => (
+          <div key={`${step.status}-${i}`} className="flex items-center gap-1.5 shrink-0">
+            <div className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary whitespace-nowrap">
+              {step.title || step.status}{step.at ? ` · ${new Date(step.at).toLocaleDateString()}` : ""}
+            </div>
+            {i < steps.length - 1 && <div className="h-px w-6 bg-primary/40" />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function CashoutButton({ betId, amount }: { betId: string; amount: number }) {
   const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
