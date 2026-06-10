@@ -86,6 +86,7 @@ export type Database = {
           force_reload_at: string | null
           friends_enabled: boolean
           futures_max_payout: number
+          futures_max_selections: number
           futures_min_stake: number
           futures_section_title: string
           gift_daily_limit: number
@@ -163,6 +164,7 @@ export type Database = {
           force_reload_at?: string | null
           friends_enabled?: boolean
           futures_max_payout?: number
+          futures_max_selections?: number
           futures_min_stake?: number
           futures_section_title?: string
           gift_daily_limit?: number
@@ -240,6 +242,7 @@ export type Database = {
           force_reload_at?: string | null
           friends_enabled?: boolean
           futures_max_payout?: number
+          futures_max_selections?: number
           futures_min_stake?: number
           futures_section_title?: string
           gift_daily_limit?: number
@@ -1198,6 +1201,12 @@ export type Database = {
       }
       odds: {
         Row: {
+          future_candidate_type: string | null
+          future_emblem_url: string | null
+          future_next_at: string | null
+          future_next_title: string | null
+          future_progress: Json
+          future_status: string
           id: string
           is_winner: boolean | null
           label: string
@@ -1206,6 +1215,12 @@ export type Database = {
           value: number
         }
         Insert: {
+          future_candidate_type?: string | null
+          future_emblem_url?: string | null
+          future_next_at?: string | null
+          future_next_title?: string | null
+          future_progress?: Json
+          future_status?: string
           id?: string
           is_winner?: boolean | null
           label: string
@@ -1214,6 +1229,12 @@ export type Database = {
           value: number
         }
         Update: {
+          future_candidate_type?: string | null
+          future_emblem_url?: string | null
+          future_next_at?: string | null
+          future_next_title?: string | null
+          future_progress?: Json
+          future_status?: string
           id?: string
           is_winner?: boolean | null
           label?: string
