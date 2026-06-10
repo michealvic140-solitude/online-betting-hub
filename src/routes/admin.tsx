@@ -1379,9 +1379,9 @@ function FuturesAdminPanel() {
   }
   async function createFuture() {
     const options = draft.options.split("\n").map((line) => {
-      const [label, odd, type, emblem] = line.split("|").map((x) => x.trim());
-      const fallback = line.split(/[,@]/).map((x) => x.trim());
-      return { label: label || fallback[0], value: Number(odd || fallback[1]), future_candidate_type: type || null, future_emblem_url: emblem || null };
+      const parts = line.includes("|") ? line.split("|").map((x) => x.trim()) : line.split(/[,@]/).map((x) => x.trim());
+      const [label, odd, type, emblem] = parts;
+      return { label, value: Number(odd), future_candidate_type: type || null, future_emblem_url: emblem || null };
     }).filter((x) => x.label && Number.isFinite(x.value) && x.value >= 1.01);
     if (!draft.title.trim() || !draft.closes_at || options.length < 2) { toast.error("Add title, close date, and at least two outcomes like: Spain, 5.50"); return; }
     const ids = await ensureFutureTeams();
