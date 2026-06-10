@@ -119,7 +119,7 @@ function Index() {
       <HighlightsRow />
       <AnnouncementSlider />
       <AdsRow />
-      <FuturesSection title={settings?.futures_section_title || "SEASONAL TOURNAMENT"} markets={futures} />
+      <FuturesSection title={settings?.futures_section_title || "TOURNAMENT FUTURES"} markets={futures} maxSelections={Number(settings?.futures_max_selections ?? 1)} />
 
       <BookingCodeFab />
 
@@ -207,14 +207,14 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function FuturesSection({ title, markets }: { title: string; markets: MatchRow[] }) {
+function FuturesSection({ title, markets, maxSelections }: { title: string; markets: MatchRow[]; maxSelections: number }) {
   const { selections, add, remove, setOpen } = useBetSlip();
   if (markets.length === 0) return null;
   return (
     <section className="container mt-10">
       <div className="flex items-end justify-between gap-3 mb-4">
-        <SectionHeader icon={Trophy} title={title} subtitle="Season-long futures markets with admin-set odds." />
-        <Badge variant="outline" className="border-accent/40 text-accent">Futures</Badge>
+        <SectionHeader icon={Trophy} title={title} subtitle={`Season-long markets · pick up to ${maxSelections} contender${maxSelections === 1 ? "" : "s"}.`} />
+        <Badge variant="outline" className="border-accent/40 text-accent">Seasonal</Badge>
       </div>
       <div className="grid lg:grid-cols-2 gap-4">
         {markets.slice(0, 4).map((future) => {
@@ -223,7 +223,7 @@ function FuturesSection({ title, markets }: { title: string; markets: MatchRow[]
             <Card key={future.id} className="glass overflow-hidden border-accent/30">
               <div className="border-b border-border/60 bg-card/60 px-4 py-3 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[10px] uppercase tracking-[0.28em] text-accent">Seasonal Tournament</div>
+                  <div className="text-[10px] uppercase tracking-[0.28em] text-accent">Tournament Futures</div>
                   <div className="font-black text-lg truncate">{future.name}</div>
                 </div>
                 <div className="text-right text-[10px] text-muted-foreground shrink-0">
@@ -233,20 +233,32 @@ function FuturesSection({ title, markets }: { title: string; markets: MatchRow[]
               <div className="grid grid-cols-2 gap-px bg-border/50 p-px">
                 {(market?.odds ?? []).slice(0, 16).map((odd) => {
                   const selected = selections.some((s) => s.odd_id === odd.id);
+                  const status = odd.future_status ?? "active";
+                  const blocked = !market?.is_open || future.status !== "scheduled" || ["disqualified", "lost", "settled"].includes(status);
                   return (
                     <button
                       key={odd.id}
                       onClick={() => {
                         if (selected) remove(odd.id);
                         else {
+                          if (blocked) return;
+                          if (selections.filter((s) => s.is_future).length >= maxSelections) { toast.error(`This market allows up to ${maxSelections} futures selection${maxSelections === 1 ? "" : "s"}.`); return; }
                           add({ match_id: future.id, match_name: future.name, market_id: market.id, market_name: market.name, odd_id: odd.id, selection_label: odd.label, odds: Number(odd.value), is_future: true });
                           setOpen(true);
                         }
                       }}
-                      className={`min-h-16 bg-card/90 px-3 py-2 text-center transition hover:bg-primary/10 ${selected ? "ring-2 ring-primary bg-primary/15" : ""}`}
+                      disabled={blocked && !selected}
+                      className={`min-h-24 bg-card/90 px-3 py-2 text-left transition hover:bg-primary/10 disabled:opacity-45 disabled:hover:bg-card/90 ${selected ? "ring-2 ring-primary bg-primary/15" : ""}`}
                     >
-                      <div className="text-xs font-bold text-foreground truncate">{odd.label}</div>
-                      <div className="font-mono font-black text-accent">{Number(odd.value).toFixed(2)}</div>
+                      <div className="flex items-center gap-2">
+                        <FutureEmblem label={odd.label} url={odd.future_emblem_url} />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-bold text-foreground truncate">{odd.label}</div>
+                          <div className="text-[9px] uppercase tracking-widest text-muted-foreground truncate">{odd.future_candidate_type ?? "Contender"}</div>
+                        </div>
+                        <div className="font-mono font-black text-accent">{Number(odd.value).toFixed(2)}</div>
+                      </div>
+                      <FutureProgress odd={odd} />
                     </button>
                   );
                 })}
