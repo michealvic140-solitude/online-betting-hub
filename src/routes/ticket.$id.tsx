@@ -43,7 +43,7 @@ function TicketPage() {
 
   async function loadBet() {
     const { data, error } = await supabase.from("bets")
-      .select("*, bet_selections(*, matches!match_id(name, status, home_score, away_score, is_virtual, home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url)), markets!market_id(name))")
+      .select("*, bet_selections(*, matches!match_id(name, status, home_score, away_score, is_virtual, match_kind, home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url)), markets!market_id(name), odds!odd_id(future_status,future_next_title,future_next_at,future_progress,future_emblem_url,future_candidate_type))")
       .eq("id", id).maybeSingle();
     if (error) { console.error("loadBet error", error); return; }
     if (!data) return;
@@ -101,6 +101,7 @@ export function BetVoucher({ bet, sels, statusBadge, allWon, copy, shareCode }: 
 }) {
   const status = bet.status as string;
   const isVirtualTicket = sels.some((s: any) => s.matches?.is_virtual);
+  const isFutureTicket = sels.some((s: any) => s.matches?.match_kind === "future");
   const statusBarCls =
     status === "won" || status === "cashed_out" ? "voucher-status-bar-won"
     : status === "lost" ? "voucher-status-bar-lost"
@@ -160,7 +161,7 @@ export function BetVoucher({ bet, sels, statusBadge, allWon, copy, shareCode }: 
               <Sparkles className="inline h-4 w-4 text-primary ml-2 -mt-2" />
             </h2>
             <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.22em] text-[10px]">
-              {isVirtualTicket ? "Virtual Matches Voucher" : "Real Matches Voucher"}
+              {isVirtualTicket ? "Virtual Matches Voucher" : isFutureTicket ? "Tournament Futures Voucher" : "Real Matches Voucher"}
             </Badge>
           </div>
 
