@@ -209,13 +209,19 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function FuturesSection({ title, markets, maxSelections }: { title: string; markets: MatchRow[]; maxSelections: number }) {
   const { selections, add, remove, setOpen } = useBetSlip();
-  if (markets.length === 0) return null;
   return (
     <section className="container mt-10">
       <div className="flex items-end justify-between gap-3 mb-4">
         <SectionHeader icon={Trophy} title={title} subtitle={`Season-long markets · pick up to ${maxSelections} contender${maxSelections === 1 ? "" : "s"}.`} />
         <Badge variant="outline" className="border-accent/40 text-accent">Seasonal</Badge>
       </div>
+      {markets.length === 0 && (
+        <Card className="glass-strong p-5 border-accent/30">
+          <div className="text-[10px] uppercase tracking-[0.28em] text-accent">Tournament futures</div>
+          <div className="mt-1 font-black text-xl">No active seasonal market yet</div>
+          <p className="mt-1 text-sm text-muted-foreground">New champion, top shooter, best clan, and most-wins markets will appear here when posted.</p>
+        </Card>
+      )}
       <div className="grid lg:grid-cols-2 gap-4">
         {markets.slice(0, 4).map((future) => {
           const market = future.markets?.[0];
