@@ -271,6 +271,33 @@ function FuturesSection({ title, markets, maxSelections }: { title: string; mark
   );
 }
 
+function FutureEmblem({ label, url }: { label: string; url?: string | null }) {
+  const initials = label.split(/\s+/).filter(Boolean).map((p) => p[0]).slice(0, 2).join("").toUpperCase() || "LS";
+  return (
+    <span className="h-10 w-10 shrink-0 rounded-full border border-primary/35 bg-primary/10 grid place-items-center overflow-hidden text-[11px] font-black text-primary">
+      {url ? <img src={url} alt="" className="h-full w-full object-cover" /> : initials}
+    </span>
+  );
+}
+
+function FutureProgress({ odd }: { odd: any }) {
+  const progress = Array.isArray(odd.future_progress) ? odd.future_progress : [];
+  const status = odd.future_status ?? "active";
+  const latest = progress[progress.length - 1];
+  const tone = status === "winner" ? "text-emerald-300" : ["lost", "disqualified", "settled"].includes(status) ? "text-destructive" : "text-primary";
+  return (
+    <div className="mt-2 border-t border-border/40 pt-2">
+      <div className={`text-[10px] uppercase tracking-widest font-bold ${tone}`}>{status.replace(/_/g, " ")}</div>
+      <div className="mt-1 h-1.5 rounded-full bg-muted overflow-hidden">
+        <div className="h-full bg-gradient-gold" style={{ width: `${Math.min(100, Math.max(18, (progress.length + 1) * 22))}%` }} />
+      </div>
+      <div className="mt-1 text-[10px] text-muted-foreground truncate">
+        {odd.future_next_title ? `Next: ${odd.future_next_title}` : latest?.title ?? "Awaiting next round"}
+      </div>
+    </div>
+  );
+}
+
 function BookingCodeFab() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
