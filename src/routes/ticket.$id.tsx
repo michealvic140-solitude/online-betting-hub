@@ -202,6 +202,7 @@ export function BetVoucher({ bet, sels, statusBadge, allWon, copy, shareCode }: 
           <div className="space-y-3">
             {sels.map((s: any, i: number) => {
               const m = s.matches;
+              const isFuture = m?.match_kind === "future";
               const live = m?.status === "live";
               const ended = m?.status === "ended";
               const won = s.result === "won";
@@ -209,28 +210,29 @@ export function BetVoucher({ bet, sels, statusBadge, allWon, copy, shareCode }: 
               const badgeCls = won ? "badge-won" : lost ? "badge-lost" : "badge-pending";
               const badgeLabel = won ? "WON" : lost ? "LOST" : live ? "LIVE" : "PENDING";
               const BadgeIcon = won ? Trophy : lost ? X : ClockIcon;
-              const scoreLabel = ended ? "FINAL" : live ? "LIVE" : "SCORE";
+              const scoreLabel = isFuture ? "PROGRESS" : ended ? "FINAL" : live ? "LIVE" : "SCORE";
+              const futureStatus = s.odds?.future_status ?? "active";
               return (
                 <div key={s.id} className="voucher-row p-3 sm:p-4 transition-all hover:scale-[1.01]">
                   <div className="flex items-center gap-3">
                     {/* Logo */}
                     <div className="shrink-0">
-                      <TeamLogo name={m?.home_team?.name} url={m?.home_team?.logo_url} size={36} rounded="full" />
+                      <TeamLogo name={isFuture ? s.selection_label : m?.home_team?.name} url={isFuture ? s.odds?.future_emblem_url : m?.home_team?.logo_url} size={36} rounded="full" />
                     </div>
                     {/* Match + pick */}
                     <div className="flex-1 min-w-0">
                       <div className="text-xs sm:text-sm font-extrabold tracking-wide truncate uppercase">
-                        {m?.home_team?.name} <span className="text-muted-foreground font-normal lowercase">vs</span> {m?.away_team?.name}
+                        {isFuture ? m?.name : <>{m?.home_team?.name} <span className="text-muted-foreground font-normal lowercase">vs</span> {m?.away_team?.name}</>}
                       </div>
                       <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-muted-foreground mt-0.5 truncate">
-                        Pick: <span className="text-foreground font-bold">{s.selection_label}</span>
+                        Pick: <span className="text-foreground font-bold">{s.selection_label}</span>{isFuture && <span> · {s.odds?.future_candidate_type ?? "Contender"}</span>}
                       </div>
                     </div>
                     {/* Score */}
                     <div className="text-center shrink-0 hidden sm:block">
                       <div className="text-[9px] uppercase tracking-widest text-muted-foreground">{scoreLabel}</div>
                       <div className={`font-mono font-black text-base ${live ? "neon-green animate-pulse" : "text-foreground"}`}>
-                        {m ? `${m.home_score}-${m.away_score}` : "—"}
+                        {isFuture ? futureStatus.toUpperCase() : m ? `${m.home_score}-${m.away_score}` : "—"}
                       </div>
                     </div>
                     {/* Status badge */}
@@ -246,8 +248,9 @@ export function BetVoucher({ bet, sels, statusBadge, allWon, copy, shareCode }: 
                   {/* mobile score row */}
                   <div className="sm:hidden mt-2 pt-2 border-t border-emerald-500/15 flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
                     <span>{scoreLabel}</span>
-                    <span className={`font-mono font-black ${live ? "neon-green animate-pulse" : "text-foreground"}`}>{m ? `${m.home_score}-${m.away_score}` : "—"}</span>
+                    <span className={`font-mono font-black ${live ? "neon-green animate-pulse" : "text-foreground"}`}>{isFuture ? futureStatus.toUpperCase() : m ? `${m.home_score}-${m.away_score}` : "—"}</span>
                   </div>
+                  {isFuture && <FutureTicketProgress odd={s.odds} />}
                 </div>
               );
             })}
