@@ -223,7 +223,7 @@ function FuturesSection({ title, markets, maxSelections }: { title: string; mark
         </Card>
       )}
       <div className="grid lg:grid-cols-2 gap-4">
-        {markets.slice(0, 4).map((future) => {
+        {markets.map((future) => {
           const market = future.markets?.[0];
           return (
             <Card key={future.id} className="glass overflow-hidden border-accent/30">
