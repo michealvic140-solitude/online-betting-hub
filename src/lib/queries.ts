@@ -2,7 +2,19 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type MatchStatus = "scheduled" | "live" | "ended" | "cancelled";
 
-export interface OddRow { id: string; label: string; value: number; is_winner: boolean | null; market_id: string }
+export interface OddRow {
+  id: string;
+  label: string;
+  value: number;
+  is_winner: boolean | null;
+  market_id: string;
+  future_candidate_type?: string | null;
+  future_emblem_url?: string | null;
+  future_status?: "active" | "qualified" | "disqualified" | "lost" | "winner" | "settled" | null;
+  future_next_title?: string | null;
+  future_next_at?: string | null;
+  future_progress?: Array<{ status: string; title?: string; at?: string; note?: string }> | null;
+}
 export interface MarketRow { id: string; name: string; is_open: boolean; odds: OddRow[] }
 export interface TeamRow { id: string; name: string; logo_url: string | null; gang_type: "G" | "F" | null }
 export interface MatchRow {
@@ -25,7 +37,7 @@ const matchSelect = `
   away_team:teams!away_team_id(id,name,logo_url,gang_type),
   home_player:players!home_player_id(id,name,avatar_url,team_id),
   away_player:players!away_player_id(id,name,avatar_url,team_id),
-  markets(id,name,is_open,odds(id,label,value,is_winner,market_id))
+  markets(id,name,is_open,odds(id,label,value,is_winner,market_id,future_candidate_type,future_emblem_url,future_status,future_next_title,future_next_at,future_progress))
 `;
 
 export async function fetchMatches(): Promise<MatchRow[]> {

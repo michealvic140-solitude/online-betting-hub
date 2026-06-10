@@ -1147,6 +1147,7 @@ function MatchesPanel() {
       <div className="flex flex-wrap items-center gap-2">
         <Button className="btn-luxury" onClick={() => setWizard(true)}><Plus className="h-4 w-4 mr-1" />New Match (Wizard)</Button>
         <Button className="btn-luxury" onClick={() => setShooterWizard(true)}><Crosshair className="h-4 w-4 mr-1" />New Shooter Match</Button>
+        <Button className="btn-luxury" onClick={() => window.dispatchEvent(new CustomEvent("admin:set-tab", { detail: "futures" }))}><Target className="h-4 w-4 mr-1" />New Tournament Futures</Button>
         <Button variant="destructive" onClick={clearEnded}>
           <Trash2 className="h-4 w-4 mr-1" />Clear Ended Matches
         </Button>
@@ -1231,11 +1232,11 @@ async function settleBetsForMatch(matchId: string, winnerTeamId: string | null, 
   }
 }
 
-async function settleFutureBets(matchId: string, winningOddId: string, winningLabel: string) {
+async function settleFutureBets(matchId: string, winningOddIds: string[], winningLabel: string) {
   const { data: sels } = await supabase.from("bet_selections").select("*").eq("match_id", matchId);
   if (!sels || sels.length === 0) return;
   for (const s of sels) {
-    await supabase.from("bet_selections").update({ result: s.odd_id === winningOddId ? "won" : "lost" }).eq("id", s.id);
+    await supabase.from("bet_selections").update({ result: winningOddIds.includes(s.odd_id) ? "won" : "lost" }).eq("id", s.id);
   }
   const betIds = Array.from(new Set(sels.map((s: any) => s.bet_id)));
   for (const bid of betIds) {
@@ -1340,17 +1341,23 @@ function ShooterSelect({ label, value, players, onChange }: { label: string; val
 }
 
 function FuturesAdminPanel() {
-  const [settings, setSettings] = useState({ futures_section_title: "SEASONAL TOURNAMENT", futures_min_stake: 1, futures_max_payout: 100000000 });
+  const [settings, setSettings] = useState({ futures_section_title: "TOURNAMENT FUTURES", futures_min_stake: 1, futures_max_payout: 100000000, futures_max_selections: 1 });
   const [futures, setFutures] = useState<any[]>([]);
-  const [draft, setDraft] = useState({ title: "Gang of the Season / Champion", closes_at: "", options: "", min_stake: 1, max_payout: 100000000 });
+  const [teams, setTeams] = useState<any[]>([]);
+  const [players, setPlayers] = useState<any[]>([]);
+  const [draft, setDraft] = useState({ title: "Gang Champion of the Season", opens_at: new Date().toISOString().slice(0, 16), closes_at: "", options: "", min_stake: 1, max_payout: 100000000, max_selections: 1, next_title: "Round 1" });
 
   async function load() {
-    const [{ data: s }, { data: f }] = await Promise.all([
-      supabase.from("app_settings").select("futures_section_title,futures_min_stake,futures_max_payout").eq("id", 1).maybeSingle(),
-      supabase.from("matches").select("*, markets(id,name,is_open,odds(id,label,value,is_winner,market_id))").eq("match_kind", "future").eq("is_archived", false).order("start_time", { ascending: false }),
+    const [{ data: s }, { data: f }, { data: tm }, { data: pl }] = await Promise.all([
+      supabase.from("app_settings").select("futures_section_title,futures_min_stake,futures_max_payout,futures_max_selections").eq("id", 1).maybeSingle(),
+      supabase.from("matches").select("*, markets(id,name,is_open,odds(id,label,value,is_winner,market_id,future_candidate_type,future_emblem_url,future_status,future_next_title,future_next_at,future_progress))").eq("match_kind", "future").eq("is_archived", false).order("start_time", { ascending: false }),
+      supabase.from("teams").select("id,name,logo_url,gang_type").order("name"),
+      supabase.from("players").select("id,name,avatar_url,team_id,teams!team_id(name)").order("name"),
     ]);
-    if (s) setSettings({ futures_section_title: (s as any).futures_section_title ?? "SEASONAL TOURNAMENT", futures_min_stake: Number((s as any).futures_min_stake ?? 1), futures_max_payout: Number((s as any).futures_max_payout ?? 100000000) });
+    if (s) setSettings({ futures_section_title: (s as any).futures_section_title ?? "TOURNAMENT FUTURES", futures_min_stake: Number((s as any).futures_min_stake ?? 1), futures_max_payout: Number((s as any).futures_max_payout ?? 100000000), futures_max_selections: Number((s as any).futures_max_selections ?? 1) });
     setFutures(f ?? []);
+    setTeams(tm ?? []);
+    setPlayers(pl ?? []);
   }
   useEffect(() => { load(); }, []);
 
@@ -1366,39 +1373,60 @@ function FuturesAdminPanel() {
     const { error } = await supabase.from("app_settings").update(settings as any).eq("id", 1);
     if (error) toast.error(error.message); else toast.success("Futures settings saved");
   }
+  function addCandidate(label: string, odds = 5, type = "contender", emblem?: string | null) {
+    const row = [label, odds.toFixed(2), type, emblem ?? ""].join(" | ");
+    setDraft((d) => ({ ...d, options: `${d.options}${d.options.trim() ? "\n" : ""}${row}` }));
+  }
   async function createFuture() {
     const options = draft.options.split("\n").map((line) => {
-      const [label, odd] = line.split(/[,|@]/).map((x) => x.trim());
-      return { label, value: Number(odd) };
+      const parts = line.includes("|") ? line.split("|").map((x) => x.trim()) : line.split(/[,@]/).map((x) => x.trim());
+      const [label, odd, type, emblem] = parts;
+      return { label, value: Number(odd), future_candidate_type: type || null, future_emblem_url: emblem || null };
     }).filter((x) => x.label && Number.isFinite(x.value) && x.value >= 1.01);
     if (!draft.title.trim() || !draft.closes_at || options.length < 2) { toast.error("Add title, close date, and at least two outcomes like: Spain, 5.50"); return; }
     const ids = await ensureFutureTeams();
     if (!ids.a || !ids.b) { toast.error("Could not prepare futures teams"); return; }
     const { data: m, error } = await supabase.from("matches").insert({
       name: draft.title.trim(), home_team_id: ids.a, away_team_id: ids.b, match_kind: "future", is_featured: true, marketing_enabled: true,
-      location: "Seasonal Tournament Futures", start_time: new Date(draft.closes_at).toISOString(), status: "scheduled",
+      location: `Opens ${new Date(draft.opens_at).toLocaleString()} · ${draft.next_title || "Tournament"}`, start_time: new Date(draft.closes_at).toISOString(), lock_time: new Date(draft.opens_at).toISOString(), status: "scheduled",
     } as any).select().single();
     if (error) { toast.error(error.message); return; }
     const { data: market } = await supabase.from("markets").insert({ match_id: m.id, name: draft.title.trim() }).select().single();
-    if (market) await supabase.from("odds").insert(options.map((o) => ({ market_id: market.id, label: o.label, value: o.value })));
-    await supabase.from("app_settings").update({ futures_min_stake: draft.min_stake, futures_max_payout: draft.max_payout } as any).eq("id", 1);
+    if (market) await supabase.from("odds").insert(options.map((o) => ({ market_id: market.id, label: o.label, value: o.value, future_candidate_type: o.future_candidate_type, future_emblem_url: o.future_emblem_url, future_next_title: draft.next_title || null, future_next_at: draft.opens_at ? new Date(draft.opens_at).toISOString() : null })) as any);
+    await supabase.from("app_settings").update({ futures_min_stake: draft.min_stake, futures_max_payout: draft.max_payout, futures_max_selections: draft.max_selections } as any).eq("id", 1);
     await logAudit("future_market_created", "match", m.id, { title: draft.title, options: options.length });
     toast.success("Futures market created");
-    setDraft({ title: "Gang of the Season / Champion", closes_at: "", options: "", min_stake: draft.min_stake, max_payout: draft.max_payout });
+    setDraft({ title: "Gang Champion of the Season", opens_at: draft.opens_at, closes_at: "", options: "", min_stake: draft.min_stake, max_payout: draft.max_payout, max_selections: draft.max_selections, next_title: "Round 1" });
     load();
   }
   async function updateOdd(oddId: string, value: number) {
     await supabase.from("odds").update({ value } as any).eq("id", oddId);
     load();
   }
-  async function settleFuture(match: any, odd: any) {
-    if (!confirm(`Settle ${match.name} with winner: ${odd.label}?`)) return;
-    await supabase.from("odds").update({ is_winner: false }).eq("market_id", odd.market_id);
-    await supabase.from("odds").update({ is_winner: true }).eq("id", odd.id);
+  async function updateFutureStatus(odd: any, status: string, title?: string, at?: string) {
+    const progress = Array.isArray(odd.future_progress) ? odd.future_progress : [];
+    const entry = { status, title: title || odd.future_next_title || status, at: at ? new Date(at).toISOString() : new Date().toISOString() };
+    await supabase.from("odds").update({ future_status: status, future_next_title: title || null, future_next_at: at ? new Date(at).toISOString() : null, future_progress: [...progress, entry], is_winner: status === "winner" ? true : odd.is_winner } as any).eq("id", odd.id);
+    if (["lost", "disqualified"].includes(status)) await loseFutureSelection(odd);
+    load();
+  }
+  async function loseFutureSelection(odd: any) {
+    const { data: sels } = await supabase.from("bet_selections").select("id,bet_id").eq("odd_id", odd.id).is("result", null);
+    if (!sels?.length) return;
+    await supabase.from("bet_selections").update({ result: "lost" }).eq("odd_id", odd.id).is("result", null);
+    const betIds = Array.from(new Set(sels.map((s: any) => s.bet_id)));
+    for (const bid of betIds) await supabase.from("bets").update({ status: "lost", settled_at: new Date().toISOString() } as any).eq("id", bid).eq("status", "open");
+  }
+  async function finalizeFuture(match: any) {
+    const winners = (match.markets ?? []).flatMap((m: any) => m.odds ?? []).filter((o: any) => o.future_status === "winner" || o.is_winner);
+    if (winners.length === 0) { toast.error("Mark at least one winner first"); return; }
+    if (!confirm(`Settle ${match.name} with ${winners.length} winner(s)?`)) return;
+    await supabase.from("odds").update({ is_winner: false, future_status: "settled" } as any).in("market_id", (match.markets ?? []).map((m: any) => m.id));
+    await supabase.from("odds").update({ is_winner: true, future_status: "winner" } as any).in("id", winners.map((o: any) => o.id));
     await supabase.from("markets").update({ is_open: false }).eq("match_id", match.id);
     await supabase.from("matches").update({ status: "ended", settled_at: new Date().toISOString() } as any).eq("id", match.id);
-    await settleFutureBets(match.id, odd.id, odd.label);
-    await logAudit("future_market_settled", "match", match.id, { winner: odd.label });
+    await settleFutureBets(match.id, winners.map((o: any) => o.id), winners.map((o: any) => o.label).join(", "));
+    await logAudit("future_market_settled", "match", match.id, { winners: winners.map((o: any) => o.label) });
     toast.success("Future settled and tickets updated");
     load();
   }
@@ -1413,25 +1441,56 @@ function FuturesAdminPanel() {
       <Card className="glass-strong p-4 space-y-3">
         <div className="font-bold flex items-center gap-2"><Target className="h-4 w-4 text-primary" />Futures Betting Control</div>
         <Input value={settings.futures_section_title} onChange={(e) => setSettings({ ...settings, futures_section_title: e.target.value })} placeholder="Homepage section name" />
-        <div className="grid grid-cols-2 gap-2"><Input type="number" value={settings.futures_min_stake} onChange={(e) => setSettings({ ...settings, futures_min_stake: Number(e.target.value) })} /><Input type="number" value={settings.futures_max_payout} onChange={(e) => setSettings({ ...settings, futures_max_payout: Number(e.target.value) })} /></div>
+        <div className="grid grid-cols-3 gap-2"><Input type="number" min={1} value={settings.futures_min_stake} onChange={(e) => setSettings({ ...settings, futures_min_stake: Number(e.target.value) })} /><Input type="number" min={1} value={settings.futures_max_payout} onChange={(e) => setSettings({ ...settings, futures_max_payout: Number(e.target.value) })} /><Input type="number" min={1} max={3} value={settings.futures_max_selections} onChange={(e) => setSettings({ ...settings, futures_max_selections: Math.min(3, Math.max(1, Number(e.target.value))) })} /></div>
         <Button variant="outline" onClick={saveSettings}>Save Section Settings</Button>
         <div className="h-px bg-border" />
         <Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Market title" />
-        <Input type="datetime-local" value={draft.closes_at} onChange={(e) => setDraft({ ...draft, closes_at: e.target.value })} />
-        <Textarea rows={8} value={draft.options} onChange={(e) => setDraft({ ...draft, options: e.target.value })} placeholder={"One option per line:\nGang A, 5.50\nTop Shooter, 8.00\nBest Clan, 10.00"} />
-        <div className="grid grid-cols-2 gap-2"><Input type="number" min={1} value={draft.min_stake} onChange={(e) => setDraft({ ...draft, min_stake: Number(e.target.value) })} /><Input type="number" min={1} value={draft.max_payout} onChange={(e) => setDraft({ ...draft, max_payout: Number(e.target.value) })} /></div>
+        <Input value={draft.next_title} onChange={(e) => setDraft({ ...draft, next_title: e.target.value })} placeholder="Current / next round title" />
+        <div><label className="text-xs text-muted-foreground">Opening date</label><Input type="datetime-local" value={draft.opens_at} onChange={(e) => setDraft({ ...draft, opens_at: e.target.value })} /></div>
+        <div><label className="text-xs text-muted-foreground">Closing date</label><Input type="datetime-local" value={draft.closes_at} onChange={(e) => setDraft({ ...draft, closes_at: e.target.value })} /></div>
+        <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1">
+          {teams.slice(0, 12).map((t) => <Button key={t.id} size="sm" variant="outline" onClick={() => addCandidate(t.name, 5, t.gang_type === "F" ? "Faction / Clan" : "Gang", t.logo_url)}>{t.name}</Button>)}
+          {players.slice(0, 12).map((p) => <Button key={p.id} size="sm" variant="outline" onClick={() => addCandidate(p.name, 8, "Shooter", p.avatar_url)}>{p.name}</Button>)}
+        </div>
+        <Textarea rows={8} value={draft.options} onChange={(e) => setDraft({ ...draft, options: e.target.value })} placeholder={"One option per line:\nGang A | 5.50 | Gang | image-url\nTop Shooter | 8.00 | Shooter | image-url\nBest Clan | 10.00 | Faction / Clan | image-url"} />
+        <div className="grid grid-cols-3 gap-2"><Input type="number" min={1} value={draft.min_stake} onChange={(e) => setDraft({ ...draft, min_stake: Number(e.target.value) })} /><Input type="number" min={1} value={draft.max_payout} onChange={(e) => setDraft({ ...draft, max_payout: Number(e.target.value) })} /><Input type="number" min={1} max={3} value={draft.max_selections} onChange={(e) => setDraft({ ...draft, max_selections: Math.min(3, Math.max(1, Number(e.target.value))) })} /></div>
         <Button className="btn-luxury w-full" onClick={createFuture}><Plus className="h-4 w-4 mr-1" />Create Futures Market</Button>
       </Card>
       <div className="space-y-3">
         {futures.map((f) => (
           <Card key={f.id} className="glass p-4 space-y-3">
-            <div className="flex items-start gap-2"><div className="min-w-0 flex-1"><div className="font-bold text-lg truncate">{f.name}</div><div className="text-xs text-muted-foreground">Closes {new Date(f.start_time).toLocaleString()} · {f.status}</div></div><Button size="sm" variant="destructive" onClick={() => archiveFuture(f.id)}><Trash2 className="h-3 w-3" /></Button></div>
-            {(f.markets ?? []).map((m: any) => <div key={m.id} className="grid grid-cols-2 md:grid-cols-3 gap-2">{(m.odds ?? []).map((o: any) => <div key={o.id} className="rounded-lg border border-primary/20 bg-card/60 p-2"><div className="text-xs font-bold truncate">{o.label}</div><Input className="h-8 my-2" type="number" step="0.01" value={Number(o.value)} onChange={(e) => updateOdd(o.id, Number(e.target.value))} /><Button size="sm" className="w-full" disabled={f.status === "ended"} onClick={() => settleFuture(f, o)}>{o.is_winner ? "Winner" : "Settle"}</Button></div>)}</div>)}
+            <div className="flex items-start gap-2"><div className="min-w-0 flex-1"><div className="font-bold text-lg truncate">{f.name}</div><div className="text-xs text-muted-foreground">Opens {f.lock_time ? new Date(f.lock_time).toLocaleString() : "now"} · Closes {new Date(f.start_time).toLocaleString()} · {f.status}</div></div><Button size="sm" className="btn-luxury" disabled={f.status === "ended"} onClick={() => finalizeFuture(f)}>Finalize</Button><Button size="sm" variant="destructive" onClick={() => archiveFuture(f.id)}><Trash2 className="h-3 w-3" /></Button></div>
+            {(f.markets ?? []).map((m: any) => <div key={m.id} className="grid grid-cols-2 md:grid-cols-3 gap-2">{(m.odds ?? []).map((o: any) => <FutureOddAdminCard key={o.id} odd={o} disabled={f.status === "ended"} onOdd={updateOdd} onStatus={updateFutureStatus} />)}</div>)}
           </Card>
         ))}
       </div>
     </div>
   );
+}
+
+function FutureOddAdminCard({ odd, disabled, onOdd, onStatus }: { odd: any; disabled: boolean; onOdd: (id: string, value: number) => void; onStatus: (odd: any, status: string, title?: string, at?: string) => void }) {
+  const [title, setTitle] = useState(odd.future_next_title ?? "Next round");
+  const [at, setAt] = useState(odd.future_next_at ? new Date(odd.future_next_at).toISOString().slice(0, 16) : "");
+  const status = odd.future_status ?? "active";
+  return (
+    <div className="rounded-lg border border-primary/20 bg-card/60 p-2 space-y-2">
+      <div className="flex items-center gap-2"><FutureTinyEmblem label={odd.label} url={odd.future_emblem_url} /><div className="min-w-0 flex-1"><div className="text-xs font-bold truncate">{odd.label}</div><div className="text-[10px] text-muted-foreground truncate">{odd.future_candidate_type ?? "Contender"} · {status}</div></div></div>
+      <Input className="h-8" type="number" step="0.01" value={Number(odd.value)} onChange={(e) => onOdd(odd.id, Number(e.target.value))} />
+      <Input className="h-8" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Next match / round title" />
+      <Input className="h-8" type="datetime-local" value={at} onChange={(e) => setAt(e.target.value)} />
+      <div className="grid grid-cols-2 gap-1">
+        <Button size="sm" variant="outline" disabled={disabled} onClick={() => onStatus(odd, "qualified", title, at)}>Qualified</Button>
+        <Button size="sm" variant="outline" disabled={disabled} onClick={() => onStatus(odd, "winner", title, at)}>Winner</Button>
+        <Button size="sm" variant="destructive" disabled={disabled} onClick={() => onStatus(odd, "lost", title, at)}>Lost</Button>
+        <Button size="sm" variant="destructive" disabled={disabled} onClick={() => onStatus(odd, "disqualified", title, at)}>DQ</Button>
+      </div>
+    </div>
+  );
+}
+
+function FutureTinyEmblem({ label, url }: { label: string; url?: string | null }) {
+  const initials = label.split(/\s+/).filter(Boolean).map((p) => p[0]).slice(0, 2).join("").toUpperCase() || "LS";
+  return <span className="h-9 w-9 rounded-full bg-primary/10 border border-primary/30 grid place-items-center overflow-hidden text-[10px] font-bold text-primary shrink-0">{url ? <img src={url} alt="" className="h-full w-full object-cover" /> : initials}</span>;
 }
 
 function MatchWizard({ onClose }: { onClose: () => void }) {
@@ -1660,9 +1719,9 @@ function EventsPanel() {
     let banner_url: string | null = null;
     if (draft.banner) {
       const path = `event-${crypto.randomUUID()}.${draft.banner.name.split(".").pop()}`;
-      const { error } = await supabase.storage.from("announcements").upload(path, draft.banner);
+      const { error } = await supabase.storage.from("event-banners").upload(path, draft.banner);
       if (error) { toast.error(error.message); return; }
-      banner_url = supabase.storage.from("announcements").getPublicUrl(path).data.publicUrl;
+      banner_url = supabase.storage.from("event-banners").getPublicUrl(path).data.publicUrl;
     }
     const { error } = await supabase.from("events").insert({ title: draft.title, description: draft.description, banner_url, ends_at: new Date(draft.ends_at).toISOString() });
     if (error) toast.error(error.message);
@@ -2585,7 +2644,7 @@ function AnalyticsPanel() {
         supabase.from("ban_appeals").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("support_tickets").select("id", { count: "exact", head: true }).neq("status", "closed"),
         supabase.from("broadcasts").select("*").order("created_at", { ascending: false }).limit(3),
-        supabase.from("events").select("*").eq("is_active", true).order("starts_at", { ascending: true }).limit(1).maybeSingle(),
+        supabase.from("events").select("*").eq("is_active", true).gt("ends_at", new Date().toISOString()).order("ends_at", { ascending: true }).limit(1).maybeSingle(),
       ]);
       const users = u.data ?? [];
       const bets = b.data ?? [];
@@ -2796,9 +2855,12 @@ function AnalyticsPanel() {
           </PanelBlock>
           <PanelBlock title="EVENT COUNTDOWN" compact onView={() => setActiveTabFromAnalytics(nav, "events")}>
             {event ? (
-              <button onClick={() => setActiveTabFromAnalytics(nav, "events")} className="relative w-full text-left rounded p-1 transition space-y-1 overflow-hidden">
+              <button onClick={() => setActiveTabFromAnalytics(nav, "events")} className="relative w-full min-h-24 text-left rounded-lg p-2 transition space-y-1 overflow-hidden border border-primary/20 bg-card/50">
+                {event.banner_url ? <img src={event.banner_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" /> : <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20" />}
+                <div className="absolute inset-0 bg-gradient-to-r from-background/85 via-background/45 to-background/70" />
                 <div className="relative text-[9px] sm:text-xs font-bold text-primary truncate drop-shadow">{event.title}</div>
-                <div className="relative text-[10px] sm:text-sm font-mono text-amber-300 drop-shadow"><Countdown target={event.ends_at ?? event.starts_at} /></div>
+                <div className="relative text-[10px] sm:text-sm font-mono text-amber-300 drop-shadow"><Countdown target={event.ends_at} /></div>
+                {event.description && <div className="relative text-[9px] text-muted-foreground line-clamp-1">{event.description}</div>}
               </button>
             ) : <div className="text-[10px] text-muted-foreground">No active event</div>}
           </PanelBlock>
