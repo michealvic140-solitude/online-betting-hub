@@ -194,6 +194,7 @@ function AdminPage() {
             <TabsContent value="spotlights" className="mt-4"><SpotlightsAdminPanel /></TabsContent>
             <TabsContent value="clans" className="mt-4"><ClansAdminPanel /></TabsContent>
             <TabsContent value="topbets" className="mt-4"><TopBetsPanel /></TabsContent>
+            <TabsContent value="bracket" className="mt-4"><BracketAdminPanel /></TabsContent>
           </Tabs>
         </div>
       </main>
