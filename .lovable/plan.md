@@ -1,36 +1,78 @@
-The request spans backend schema, match-creation flow, leaderboard structure, admin console layout, theming, and clan management. `src/routes/admin.tsx` is 4,100 lines, so I'll batch the work to keep each step verifiable.
+# Knockout Bracket Tournament System
 
-## Batch 1 — Theme + Admin Console layout (visual fixes first)
+A clean plan before I touch code so we don't go sideways again. Reply "go" to build it.
 
-- Add thick dark-green background tokens to `src/styles.css` (apply app-wide), and place the LSL logo as a large, faintly-visible centered watermark on the root layout.
-- Force the Admin Console page to a fixed desktop width on mobile (wrap the page in a `min-width:1280px` container so phones get a horizontally-scrollable desktop view — matches your screenshot literally).
-- Re-flow the dashboard grid to match the screenshot:
-  - Row: Recent Activity (wider) | (Live Gang Wars stacked over Event Countdown) | Highlights Hub (wider).
-  - Row below: Broadcast Center | Quick Actions | Top Bets.
-  - Tile row aligned in a single 6-up strip: Virtual / Battle / Challenges / Referrals / Users / Clans.
-- Generate missing tile artwork (Virtual, Battle, Challenges, Users, Clans) via `imagegen` so all six tiles have hero images.
+## 1. Storage bucket fix (immediate)
 
-## Batch 2 — Clan admin: shooter seeding (gang optional) + delete teams/gangs
+The "Bucket not found" error you see when uploading event images means the `event-banners` bucket was never created. I'll:
 
-- Make `teams.tag`/clan tag nullable for shooters; update the ClansAdminPanel seed form so the Gang/Faction tag is optional.
-- Add a delete action on each team/gang/faction row in `ClansAdminPanel`, with a confirm dialog. Wire to a `delete_team` server fn (admin-gated).
+- Create the `event-banners` bucket (public).
+- Create a `bracket-emblems` bucket (public) for tournament participant logos.
+- Add RLS policies so admins can upload, everyone can read.
 
-## Batch 3 — Shooter Match creation + leaderboard columns
+## 2. New database tables
 
-- New "Shooter Match" tab in the admin match-creation UI: 1v1 between two seeded shooters (sourced from `players`/teams in the clan panel), with odds and a "post for marketing" toggle. Reuses existing `matches`/`odds` tables with a `match_kind = 'shooter'` discriminator.
-- Update the Shooters Leaderboard table on the public leaderboard route to columns: `RANK | GANG & FACTION | PLAYER | W | L | D | P | PTS`. Gang/Faction is the shooter's current `team.tag` (or "—" if none). Sorted by PTS desc.
+```text
+tournaments              -> id, name, banner_url, tagline, size (8/16/26/32), status, starts_at
+tournament_participants  -> id, tournament_id, player_id, team_id, display_name, emblem_url, seed
+tournament_matches       -> id, tournament_id, round (opening/r16/qf/sf/final),
+                            slot_index, code (M1, R16-1, QF1...),
+                            participant_a_id, participant_b_id,
+                            score_a, score_b, winner_id, loser_id,
+                            status (pending/qualified/disqualified), played_at
+```
 
-## Batch 4 — Top Bets ranking (total points)
+When a match is marked qualified: winner is auto-cloned into the correct next-round slot. When marked disqualified: loser is set, participant is removed from advancement.
 
-- Top Bets panel ranks shooters by their total leaderboard points (same source feeding the leaderboard PTS column). Removes the "computed from bets" logic if any and queries the points view/aggregate directly.
+## 3. Admin: Tournament Bracket panel
 
-## Technical notes
+New "Bracket" tab in admin console with **labeled columns** (no numbers as headers):
 
-- DB: one migration to (a) make `teams.tag` nullable, (b) add `matches.match_kind` text column defaulting to 'gang', (c) add an admin-only `delete_team(_team_id uuid)` SECURITY DEFINER function with audit log entry.
-- Watermark: a fixed `<div>` on `__root.tsx` with the logo at ~6% opacity, `pointer-events:none`, behind all content.
-- Mobile-as-desktop: the Admin route gets `<div className="min-w-[1280px]">…</div>` plus a top-level `overflow-x-auto` wrapper.
-- Image generation: 5 tile images (Battle, Challenges, Virtual, Users, Clans) at 1024x576 to match existing tile sizing.
+| Column label | What you enter |
+|---|---|
+| MATCH CODE | Auto (M1, R16-1, QF1…) |
+| SHOOTER A | Pick from seeded shooters |
+| SHOOTER B | Pick from seeded shooters |
+| KILLS — SHOOTER A | Single number (their kills) |
+| KILLS — SHOOTER B | Single number (their kills) |
+| RESULT | Buttons: **Mark Qualified** / **Mark Disqualified** |
+| LOST TO | Auto-filled when disqualified |
 
-Total scope is large but each batch is independently testable. I'll start with Batch 1 (theme + layout) since that's the most visible.
+Confirmation dialog before Qualified / Disqualified (you reported the buttons not working — I'll wire them with confirm + toast + error surfacing so it's obvious when it succeeds or fails).
 
-Reply "go" to start, or tell me to reorder/drop any batch.
+When a winner is marked: their slot in the next round is filled automatically and bracket re-renders live.
+
+## 4. User-facing bracket page
+
+New route `/tournament/$id` and a homepage card linking to it:
+
+- Exact visual layout from your screenshot: 5 columns (Opening / R16 / QF / SF / Final), gold accents, glassmorphism cards, trophy + "CHAMPION" on the right.
+- **Fits the viewport** — no scroll. Uses CSS scale-to-fit so the whole bracket renders at one zoom level regardless of device.
+- Each cell shows: shooter name, gang tag (if any), kills, win/loss badge, who they lost to (e.g. "Lost to UNCLE RISOTTO · 12-8").
+- Tournament format strip at the bottom matching the screenshot.
+
+## 5. Ticket / voucher progress tree
+
+When a user has a futures bet on a tournament participant, their ticket page (`/ticket/$id`) shows a "PAR ROUND PROGRESS" tree:
+
+- ROUND OF 26 → ROUND OF 16 → QUARTERFINALS → SEMIFINALS → FINAL → CHAMPION
+- Each node labeled with: round name, opponent, kills score, status (Qualified / Lost to X / Pending).
+- Updates in realtime via Supabase channel as admin marks results.
+
+## 6. Realtime updates
+
+Subscribe to `tournament_matches` on both the bracket page and ticket page so scores flow instantly without refresh.
+
+## 7. Betting integration
+
+Existing futures betting (Tournament Champion, Reach Semifinals) keeps working. When a participant is disqualified, futures selections on that participant auto-mark as "lost" on user tickets.
+
+## Out of scope (tell me if you want these too)
+
+- Knockout for **gangs** (this plan is shooters-only per your earlier choice).
+- Bracket reseeding mid-tournament.
+- Public bracket image export.
+
+---
+
+Reply **"go"** and I'll build it end-to-end in one pass: storage bucket, migration, admin panel, public bracket page, ticket progress tree, realtime, and the column labels you asked for.
