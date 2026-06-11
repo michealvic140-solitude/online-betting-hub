@@ -14,7 +14,7 @@ import {
 import {
   BarChart3, Users, Sparkles, AlertTriangle, History, ClipboardList, Send,
   MessageSquare, Megaphone, Trophy, Calendar, Wallet, ListOrdered, Tag,
-  Settings as SettingsIcon, Ticket, Coins, Dice5, Shield, Flame, Target,
+  Settings as SettingsIcon, Ticket, Coins, Dice5, Shield, Flame, Target, Crosshair,
 } from "lucide-react";
 import lslLogo from "@/assets/lsl-logo.png";
 
@@ -34,6 +34,7 @@ const NAV: AdminNavItem[] = [
   { key: "appeals",     label: "Appeals",              icon: AlertTriangle,   modOk: true, alertKey: "appeals" },
   { key: "audit",       label: "Audit",                icon: History,         admin: true },
   { key: "bettracker",  label: "Bet Tracker",          icon: ClipboardList,   admin: true, alertKey: "bettracker" },
+  { key: "bracket",     label: "Knockout Bracket",     icon: Crosshair,       admin: true },
   { key: "broadcast",   label: "Broadcast",            icon: Send,            admin: true },
   { key: "challenges",  label: "Challenges",           icon: Sparkles,        admin: true },
   { key: "chat",        label: "Chat",                 icon: MessageSquare,   modOk: true, alertKey: "chat" },

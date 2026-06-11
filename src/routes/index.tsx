@@ -120,6 +120,7 @@ function Index() {
       <AnnouncementSlider />
       <AdsRow />
       <FuturesSection title={settings?.futures_section_title || "TOURNAMENT FUTURES"} markets={futures} maxSelections={Number(settings?.futures_max_selections ?? 1)} />
+      <KnockoutBracketTeaser />
 
       <BookingCodeFab />
 
@@ -206,6 +207,50 @@ function Stat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function KnockoutBracketTeaser() {
+  const [t, setT] = useState<any>(null);
+  useEffect(() => {
+    supabase.from("tournaments").select("id,name,tagline,banner_url,size,status,champion_participant_id")
+      .in("status", ["active", "completed"]).order("created_at", { ascending: false }).limit(1).maybeSingle()
+      .then(({ data }) => setT(data));
+    const ch = supabase.channel("home-bracket").on("postgres_changes", { event: "*", schema: "public", table: "tournaments" }, () => {
+      supabase.from("tournaments").select("id,name,tagline,banner_url,size,status,champion_participant_id")
+        .in("status", ["active", "completed"]).order("created_at", { ascending: false }).limit(1).maybeSingle()
+        .then(({ data }) => setT(data));
+    }).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+  if (!t) return null;
+  return (
+    <section className="container mt-8">
+      <Link to="/tournament/$id" params={{ id: t.id }} className="block group">
+        <div className="relative overflow-hidden rounded-2xl border border-primary/40 shadow-luxury p-5 sm:p-6" style={{
+          backgroundImage: t.banner_url ? `linear-gradient(90deg, rgba(0,8,0,0.92) 0%, rgba(0,8,0,0.55) 100%), url(${t.banner_url})` : "linear-gradient(90deg, rgba(0,16,0,0.95), rgba(0,8,0,0.92))",
+          backgroundSize: "cover", backgroundPosition: "center",
+        }}>
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-gold" />
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-gold grid place-items-center shadow-gold">
+              <Trophy className="h-8 w-8 text-primary-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] tracking-[0.3em] text-primary font-bold">LIVE TOURNAMENT</div>
+              <div className="text-2xl sm:text-3xl font-black gradient-gold-text tracking-tight">{t.name}</div>
+              <div className="text-xs text-muted-foreground italic">{t.tagline}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] tracking-widest text-muted-foreground">KNOCKOUT BRACKET</div>
+              <div className="text-sm font-bold text-primary">{t.size} SHOOTERS</div>
+              <div className="text-[10px] text-muted-foreground group-hover:text-primary transition">View bracket →</div>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </section>
+  );
+}
+
 
 function FuturesSection({ title, markets, maxSelections }: { title: string; markets: MatchRow[]; maxSelections: number }) {
   const { selections, add, remove, setOpen } = useBetSlip();
