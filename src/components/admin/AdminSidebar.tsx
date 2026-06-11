@@ -14,7 +14,7 @@ import {
 import {
   BarChart3, Users, Sparkles, AlertTriangle, History, ClipboardList, Send,
   MessageSquare, Megaphone, Trophy, Calendar, Wallet, ListOrdered, Tag,
-  Settings as SettingsIcon, Ticket, Coins, Dice5, Shield, Flame, Target,
+  Settings as SettingsIcon, Ticket, Coins, Dice5, Shield, Flame, Target, Crosshair,
 } from "lucide-react";
 import lslLogo from "@/assets/lsl-logo.png";
 
