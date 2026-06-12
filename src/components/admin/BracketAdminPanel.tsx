@@ -487,3 +487,37 @@ function MatchRow({ match, participants, onChanged, confirm, round }:
     </tr>
   );
 }
+
+function ShooterSearchPicker({ shooters, onPick }: { shooters: any[]; onPick: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full justify-start text-xs h-9" role="combobox">
+          <Search className="h-3.5 w-3.5 mr-2 opacity-60" />
+          + Add shooter to bracket {shooters.length > 0 && <span className="ml-auto opacity-60">{shooters.length} available</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search by name or gang…" />
+          <CommandList>
+            <CommandEmpty>No shooters found.</CommandEmpty>
+            <CommandGroup>
+              {shooters.map((s) => (
+                <CommandItem
+                  key={s.id}
+                  value={`${s.name} ${s.teams?.name ?? ""}`}
+                  onSelect={() => { onPick(s.id); setOpen(false); }}
+                >
+                  <span className="font-bold">{s.name}</span>
+                  {s.teams?.name && <span className="ml-2 text-muted-foreground text-xs">· {s.teams.name}</span>}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
