@@ -1721,9 +1721,12 @@ function EventsPanel() {
     let banner_url: string | null = null;
     if (draft.banner) {
       const path = `event-${crypto.randomUUID()}.${draft.banner.name.split(".").pop()}`;
-      const { error } = await supabase.storage.from("event-banners").upload(path, draft.banner);
-      if (error) { toast.error(error.message); return; }
-      banner_url = supabase.storage.from("event-banners").getPublicUrl(path).data.publicUrl;
+      const { error } = await supabase.storage.from("event-banners").upload(path, draft.banner, { upsert: true });
+      if (error) { toast.error("Upload failed: " + error.message); return; }
+      // event-banners is private — use a long-lived signed URL so the image actually renders
+      const { data: signed, error: se } = await supabase.storage.from("event-banners").createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (se || !signed) { toast.error("Failed to sign banner URL"); return; }
+      banner_url = signed.signedUrl;
     }
     const { error } = await supabase.from("events").insert({ title: draft.title, description: draft.description, banner_url, ends_at: new Date(draft.ends_at).toISOString() });
     if (error) toast.error(error.message);
@@ -4161,6 +4164,8 @@ function ChallengesAdminPanel() {
 
 function SeasonsAdminPanel() {
   const [list, setList] = useState<any[]>([]);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState<any>({ name: "", description: "", banner_url: "", starts_at: new Date().toISOString().slice(0, 16), ends_at: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 16), is_active: true });
   const load = async () => {
     const { data } = await supabase.from("seasons").select("*").order("starts_at", { ascending: false });
@@ -4169,10 +4174,21 @@ function SeasonsAdminPanel() {
   useEffect(() => { load(); }, []);
   async function save() {
     if (!form.name) return toast.error("Name required");
-    const { error } = await supabase.from("seasons").insert({ ...form, starts_at: new Date(form.starts_at).toISOString(), ends_at: new Date(form.ends_at).toISOString() });
+    let banner_url = form.banner_url || null;
+    if (bannerFile) {
+      setUploading(true);
+      const path = `season-${crypto.randomUUID()}.${bannerFile.name.split(".").pop()}`;
+      const { error: ue } = await supabase.storage.from("event-banners").upload(path, bannerFile, { upsert: true });
+      if (ue) { setUploading(false); return toast.error("Upload failed: " + ue.message); }
+      const { data: signed } = await supabase.storage.from("event-banners").createSignedUrl(path, 60 * 60 * 24 * 365);
+      banner_url = signed?.signedUrl ?? null;
+      setUploading(false);
+    }
+    const { error } = await supabase.from("seasons").insert({ ...form, banner_url, starts_at: new Date(form.starts_at).toISOString(), ends_at: new Date(form.ends_at).toISOString() });
     if (error) return toast.error(error.message);
     toast.success("Season created");
-    setForm({ ...form, name: "", description: "" });
+    setForm({ ...form, name: "", description: "", banner_url: "" });
+    setBannerFile(null);
     load();
   }
   async function toggle(s: any) {
@@ -4191,12 +4207,15 @@ function SeasonsAdminPanel() {
         <div className="font-bold">Create Season</div>
         <div className="grid md:grid-cols-2 gap-2">
           <Input placeholder="Season name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <Input placeholder="Banner URL (optional)" value={form.banner_url} onChange={(e) => setForm({ ...form, banner_url: e.target.value })} />
+          <div>
+            <label className="text-xs text-muted-foreground">Banner image (upload)</label>
+            <Input type="file" accept="image/*" onChange={(e) => setBannerFile(e.target.files?.[0] ?? null)} />
+          </div>
           <Input type="datetime-local" value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} />
           <Input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} />
         </div>
         <Textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-        <Button onClick={save} className="btn-luxury">Create Season</Button>
+        <Button onClick={save} disabled={uploading} className="btn-luxury">{uploading ? "Uploading…" : "Create Season"}</Button>
       </Card>
       <div className="space-y-2">
         {list.map((s) => (
