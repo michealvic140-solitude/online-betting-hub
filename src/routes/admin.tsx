@@ -1721,9 +1721,12 @@ function EventsPanel() {
     let banner_url: string | null = null;
     if (draft.banner) {
       const path = `event-${crypto.randomUUID()}.${draft.banner.name.split(".").pop()}`;
-      const { error } = await supabase.storage.from("event-banners").upload(path, draft.banner);
-      if (error) { toast.error(error.message); return; }
-      banner_url = supabase.storage.from("event-banners").getPublicUrl(path).data.publicUrl;
+      const { error } = await supabase.storage.from("event-banners").upload(path, draft.banner, { upsert: true });
+      if (error) { toast.error("Upload failed: " + error.message); return; }
+      // event-banners is private — use a long-lived signed URL so the image actually renders
+      const { data: signed, error: se } = await supabase.storage.from("event-banners").createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (se || !signed) { toast.error("Failed to sign banner URL"); return; }
+      banner_url = signed.signedUrl;
     }
     const { error } = await supabase.from("events").insert({ title: draft.title, description: draft.description, banner_url, ends_at: new Date(draft.ends_at).toISOString() });
     if (error) toast.error(error.message);
