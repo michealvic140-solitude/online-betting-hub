@@ -265,18 +265,10 @@ function TournamentEditor({ tournament, onChanged }: { tournament: Tournament; o
           <div className="font-bold">Seeded Shooters <span className="text-muted-foreground text-xs">(from Clans → Shooters)</span></div>
           <Badge variant="outline" className="border-primary/40 text-primary ml-auto">{participants.length} / {tournament.size}</Badge>
         </div>
-        <Select onValueChange={addParticipant}>
-          <SelectTrigger><SelectValue placeholder="+ Add shooter to bracket" /></SelectTrigger>
-          <SelectContent>
-            {shooters
-              .filter((s) => !participants.some((p) => p.player_id === s.id))
-              .map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}{s.teams?.name ? ` · ${s.teams.name}` : ""}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
+        <ShooterSearchPicker
+          shooters={shooters.filter((s) => !participants.some((p) => p.player_id === s.id))}
+          onPick={addParticipant}
+        />
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
