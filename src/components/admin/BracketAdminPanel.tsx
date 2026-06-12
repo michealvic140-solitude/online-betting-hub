@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { Crosshair, Plus, Trash2, Trophy, Upload, Check, X, Image as ImageIcon, ExternalLink } from "lucide-react";
+import { Crosshair, Plus, Trash2, Trophy, Upload, Check, X, Image as ImageIcon, ExternalLink, Search } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 type Tournament = {
   id: string; name: string; tagline: string | null; banner_url: string | null;
