@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { Crosshair, Plus, Trash2, Trophy, Upload, Check, X, Image as ImageIcon, ExternalLink } from "lucide-react";
+import { Crosshair, Plus, Trash2, Trophy, Upload, Check, X, Image as ImageIcon, ExternalLink, Search } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 type Tournament = {
   id: string; name: string; tagline: string | null; banner_url: string | null;
@@ -263,18 +265,10 @@ function TournamentEditor({ tournament, onChanged }: { tournament: Tournament; o
           <div className="font-bold">Seeded Shooters <span className="text-muted-foreground text-xs">(from Clans → Shooters)</span></div>
           <Badge variant="outline" className="border-primary/40 text-primary ml-auto">{participants.length} / {tournament.size}</Badge>
         </div>
-        <Select onValueChange={addParticipant}>
-          <SelectTrigger><SelectValue placeholder="+ Add shooter to bracket" /></SelectTrigger>
-          <SelectContent>
-            {shooters
-              .filter((s) => !participants.some((p) => p.player_id === s.id))
-              .map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}{s.teams?.name ? ` · ${s.teams.name}` : ""}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
+        <ShooterSearchPicker
+          shooters={shooters.filter((s) => !participants.some((p) => p.player_id === s.id))}
+          onPick={addParticipant}
+        />
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
@@ -491,5 +485,39 @@ function MatchRow({ match, participants, onChanged, confirm, round }:
         )}
       </td>
     </tr>
+  );
+}
+
+function ShooterSearchPicker({ shooters, onPick }: { shooters: any[]; onPick: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full justify-start text-xs h-9" role="combobox">
+          <Search className="h-3.5 w-3.5 mr-2 opacity-60" />
+          + Add shooter to bracket {shooters.length > 0 && <span className="ml-auto opacity-60">{shooters.length} available</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search by name or gang…" />
+          <CommandList>
+            <CommandEmpty>No shooters found.</CommandEmpty>
+            <CommandGroup>
+              {shooters.map((s) => (
+                <CommandItem
+                  key={s.id}
+                  value={`${s.name} ${s.teams?.name ?? ""}`}
+                  onSelect={() => { onPick(s.id); setOpen(false); }}
+                >
+                  <span className="font-bold">{s.name}</span>
+                  {s.teams?.name && <span className="ml-2 text-muted-foreground text-xs">· {s.teams.name}</span>}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
