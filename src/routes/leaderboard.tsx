@@ -182,26 +182,56 @@ function Page() {
           </TabsList>
 
           <TabsContent value="gangs" className="mt-4">
-            <Card className="glass overflow-x-auto">
+            <Card className="iced-glass overflow-x-auto p-0 border-0 bg-transparent">
               <table className="w-full text-sm">
-                <thead className="border-b border-border bg-card/40">
-                  <tr className="text-left text-xs uppercase tracking-widest text-muted-foreground">
+                <thead className="border-b border-primary/30 bg-black/30">
+                  <tr className="text-left text-[10px] uppercase tracking-[0.25em] text-primary/80">
                     <Th>Rank</Th><Th>Gang / Faction</Th><Th>Top Player</Th>
-                    <Th right>W</Th><Th right>L</Th><Th right>D</Th><Th right>P</Th><Th right>PTS</Th>
+                    <Th right>TS</Th><Th right>W</Th><Th right>L</Th><Th right>D</Th><Th right>P</Th><Th right>PTS</Th>
                   </tr>
                 </thead>
                 <tbody>
-                  {gangs.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No data yet.</td></tr>}
+                  {gangs.length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No data yet.</td></tr>}
                   {gangs.map((g, i) => (
-                    <tr key={g.name} className="border-b border-border/40 hover:bg-primary/5">
+                    <tr key={g.name} className="iced-row border-b border-primary/10">
                       <Td><span className="text-lg font-bold">{rankIcon(i)}</span></Td>
                       <Td><span className="font-bold">{g.name}</span></Td>
                       <Td><span className="text-muted-foreground">{g.top_player || "—"}</span></Td>
+                      <Td right><span className="iced-chip text-primary">{g.TS}</span></Td>
                       <Td right><span className="text-emerald-400 font-bold">{g.W}</span></Td>
                       <Td right><span className="text-destructive font-bold">{g.L}</span></Td>
                       <Td right><span className="text-amber-400 font-bold">{g.D}</span></Td>
                       <Td right>{g.P}</Td>
-                      <Td right><span className="font-bold text-primary">{g.PTS}</span></Td>
+                      <Td right><span className="iced-chip text-emerald-300">{g.PTS}</span></Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="shooters" className="mt-4">
+            <Card className="iced-glass overflow-x-auto p-0 border-0 bg-transparent">
+              <table className="w-full text-sm">
+                <thead className="border-b border-primary/30 bg-black/30">
+                  <tr className="text-left text-[10px] uppercase tracking-[0.25em] text-primary/80">
+                    <Th>Rank</Th><Th>Gang &amp; Faction</Th><Th>Player</Th>
+                    <Th right>TS</Th><Th right>W</Th><Th right>L</Th><Th right>D</Th><Th right>P</Th><Th right>PTS</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shooters.length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No shooters yet.</td></tr>}
+                  {shooters.map((p, i) => (
+                    <tr key={p.name} className="iced-row border-b border-primary/10">
+                      <Td><span className="text-lg font-bold">{rankIcon(i)}</span></Td>
+                      <Td><span className="font-bold text-primary/90">{p.gang_faction || "—"}</span></Td>
+                      <Td><span className="font-bold">{p.name}</span></Td>
+                      <Td right><span className="iced-chip text-primary">{p.TS}</span></Td>
+                      <Td right><span className="text-emerald-400 font-bold">{p.W}</span></Td>
+                      <Td right><span className="text-destructive font-bold">{p.L}</span></Td>
+                      <Td right><span className="text-amber-400 font-bold">{p.D}</span></Td>
+                      <Td right>{p.P}</Td>
+                      <Td right><span className="iced-chip text-emerald-300">{p.PTS}</span></Td>
                     </tr>
                   ))}
                 </tbody>
