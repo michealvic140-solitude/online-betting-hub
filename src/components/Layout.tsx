@@ -53,10 +53,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="relative min-h-screen">
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-primary/10 blur-3xl animate-pulse-glow" />
-        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-accent/10 blur-3xl animate-pulse-glow" />
-      </div>
+      {/* Cosmic background painted on <html> via styles.css — no extra overlays here */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-b from-card/80 to-card/50 border-b border-primary/20 shadow-[0_2px_30px_-12px_rgba(0,0,0,0.6)]">
         <div className="container mx-auto px-4 flex h-16 items-center gap-3 lg:gap-4">
           <Link to="/" className="flex items-center gap-2 group shrink-0">
