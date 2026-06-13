@@ -638,41 +638,46 @@
 }
 
 /* ===== Site-wide cosmic background (from uploaded reference) ===== */
-html, body {
-  background-color: #050608;
+html {
+  background-color: #050608 !important;
+  background-image: url("/__l5e/assets-v1/b154b82f-3334-4773-8de5-05d34604bd32/lsl-cosmic-bg.png") !important;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
 }
+body {
+  background: transparent !important;
+  background-image: none !important;
+}
+/* Kill the old /icon.svg watermark on body::before — replace with vignette only */
 body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -10;
-  pointer-events: none;
-  background-image: url("/__l5e/assets-v1/b154b82f-3334-4773-8de5-05d34604bd32/lsl-cosmic-bg.png");
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-}
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -9;
-  pointer-events: none;
+  content: "" !important;
+  position: fixed !important;
+  inset: 0 !important;
+  background-image: none !important;
   background:
-    radial-gradient(120% 80% at 50% 0%, rgba(0,0,0,0.35), rgba(0,0,0,0.75) 70%, rgba(0,0,0,0.92));
+    radial-gradient(120% 80% at 50% 0%, rgba(0,0,0,0.30), rgba(0,0,0,0.62) 65%, rgba(0,0,0,0.85)) !important;
+  opacity: 1 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  filter: none !important;
   animation: cosmic-drift 28s ease-in-out infinite alternate;
 }
 @keyframes cosmic-drift {
-  0%   { transform: scale(1)   translate3d(0,0,0); filter: hue-rotate(0deg); }
-  100% { transform: scale(1.04) translate3d(-1%, -1%, 0); filter: hue-rotate(8deg); }
+  0%   { transform: scale(1)   translate3d(0,0,0); }
+  100% { transform: scale(1.05) translate3d(-1%, -1%, 0); }
 }
 
-/* Disable the green PageShell overlays + LSL watermark (cosmic bg shows through) */
+/* Disable green PageShell overlays + LSL watermark (cosmic bg shows through) */
 .page-shell::before,
 .page-shell-aurora,
 .page-shell-logo { display: none !important; }
 .page-shell { background: transparent !important; }
+
+/* Make Layout aurora blobs invisible so the cosmic bg dominates */
+main, .page-shell-content, body > * { position: relative; z-index: 1; }
+
 
 /* ===== Thick Iced Glassmorphism — Leaderboard ===== */
 .iced-glass {
