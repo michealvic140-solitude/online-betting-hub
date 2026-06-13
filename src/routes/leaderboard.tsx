@@ -161,7 +161,7 @@ function Page() {
         if (a.manual_rank != null && b.manual_rank != null) return a.manual_rank - b.manual_rank;
         if (a.manual_rank != null) return -1;
         if (b.manual_rank != null) return 1;
-        return b.PTS - a.PTS || b.W - a.W;
+        return b.TS - a.TS || b.PTS - a.PTS || b.W - a.W;
       };
       setGangs(Array.from(gangAgg.values()).sort(sortFn));
       setShooters(Array.from(playerAgg.values()).sort(sortFn));
