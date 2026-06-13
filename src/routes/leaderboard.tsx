@@ -80,7 +80,7 @@ function Page() {
       (players ?? []).forEach((p) => {
         if (!p.name) return;
         const tname = p.team_id ? (teamMap.get(p.team_id) || "") : "";
-        playerAgg.set(p.name, { name: p.name, gang_faction: tname || "—", W: 0, L: 0, D: 0, PTS: 0, P: 0 });
+        playerAgg.set(p.name, { name: p.name, gang_faction: tname || "—", TS: 0, W: 0, L: 0, D: 0, PTS: 0, P: 0 });
       });
 
 
@@ -92,15 +92,18 @@ function Page() {
         if (m.match_kind === "future") return;
         if (m.match_kind === "shooter") {
           if (!countForShooters) return;
-          const draw = Number(m.home_score ?? 0) === Number(m.away_score ?? 0);
-          const winnerPlayerId = draw ? null : Number(m.home_score ?? 0) > Number(m.away_score ?? 0) ? m.home_player_id : m.away_player_id;
+          const hs = Number(m.home_score ?? 0);
+          const as = Number(m.away_score ?? 0);
+          const draw = hs === as;
+          const winnerPlayerId = draw ? null : hs > as ? m.home_player_id : m.away_player_id;
           for (const pid of [m.home_player_id, m.away_player_id]) {
             const pl = pid ? playerMap.get(pid) : null;
             if (!pl?.name) continue;
             const tname = pl.team_id ? (teamMap.get(pl.team_id) || "—") : "—";
-            const pc = playerAgg.get(pl.name) ?? { name: pl.name, gang_faction: tname, W: 0, L: 0, D: 0, PTS: 0, P: 0 };
+            const pc = playerAgg.get(pl.name) ?? { name: pl.name, gang_faction: tname, TS: 0, W: 0, L: 0, D: 0, PTS: 0, P: 0 };
             pc.gang_faction = tname;
             pc.P += 1;
+            pc.TS += pid === m.home_player_id ? hs : as;
             if (draw) { pc.D += 1; pc.PTS += 1; }
             else if (winnerPlayerId === pid) { pc.W += 1; pc.PTS += 3; }
             else { pc.L += 1; }
@@ -113,9 +116,11 @@ function Page() {
           const tname = teamMap.get(tid) || "Team";
           const won = m.winner_team_id === tid;
           const draw = m.winner_team_id == null;
+          const sideScore = Number((side === "home" ? m.home_score : m.away_score) ?? 0);
           if (countForGangs) {
-            const cur = gangAgg.get(tname) ?? { name: tname, top_player: (teamPlayers.get(tid) ?? [])[0], W: 0, L: 0, D: 0, PTS: 0, P: 0 };
+            const cur = gangAgg.get(tname) ?? { name: tname, top_player: (teamPlayers.get(tid) ?? [])[0], TS: 0, W: 0, L: 0, D: 0, PTS: 0, P: 0 };
             cur.P += 1;
+            cur.TS += sideScore;
             if (draw) { cur.D += 1; cur.PTS += 1; }
             else if (won) { cur.W += 1; cur.PTS += 3; }
             else { cur.L += 1; }
@@ -123,9 +128,10 @@ function Page() {
           }
           if (countForShooters) {
             (teamPlayers.get(tid) ?? []).forEach((pname) => {
-              const pc = playerAgg.get(pname) ?? { name: pname, gang_faction: tname, W: 0, L: 0, D: 0, PTS: 0, P: 0 };
+              const pc = playerAgg.get(pname) ?? { name: pname, gang_faction: tname, TS: 0, W: 0, L: 0, D: 0, PTS: 0, P: 0 };
               pc.gang_faction = pc.gang_faction || tname;
               pc.P += 1;
+              pc.TS += sideScore;
               if (draw) { pc.D += 1; pc.PTS += 1; }
               else if (won) { pc.W += 1; pc.PTS += 3; }
               else { pc.L += 1; }
@@ -142,8 +148,10 @@ function Page() {
           target.delete(o.name);
           return;
         }
+        const existing = target.get(o.name);
         target.set(o.name, {
           name: o.name, top_player: o.top_player ?? undefined,
+          TS: existing?.TS ?? 0,
           W: o.wins, L: o.losses, D: o.draws, P: o.played, PTS: o.points,
           manual_rank: o.manual_rank,
         });
