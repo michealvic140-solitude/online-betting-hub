@@ -35,7 +35,7 @@ function rankIcon(i: number) {
   return `#${i + 1}`;
 }
 
-type Stats = { name: string; top_player?: string; gang_faction?: string; W: number; L: number; D: number; PTS: number; P: number; manual_rank?: number | null };
+type Stats = { name: string; top_player?: string; gang_faction?: string; TS: number; W: number; L: number; D: number; PTS: number; P: number; manual_rank?: number | null };
 
 function Page() {
   const [shooters, setShooters] = useState<Stats[]>([]);
