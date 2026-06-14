@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WithdrawRouteImport } from './routes/withdraw'
 import { Route as WatchlistRouteImport } from './routes/watchlist'
 import { Route as VirtualRouteImport } from './routes/virtual'
+import { Route as TournamentRouteImport } from './routes/tournament'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -27,15 +28,16 @@ import { Route as GangsRouteImport } from './routes/gangs'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as ChatRouteImport } from './routes/chat'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VirtualHistoryRouteImport } from './routes/virtual.history'
-import { Route as TournamentIdRouteImport } from './routes/tournament.$id'
 import { Route as TicketIdRouteImport } from './routes/ticket.$id'
 import { Route as MatchesMatchIdRouteImport } from './routes/matches.$matchId'
 import { Route as ApiPublicVirtualTickRouteImport } from './routes/api/public/virtual-tick'
+import { Route as ApiPublicHooksSendPushRouteImport } from './routes/api/public/hooks/send-push'
 
 const WithdrawRoute = WithdrawRouteImport.update({
   id: '/withdraw',
@@ -50,6 +52,11 @@ const WatchlistRoute = WatchlistRouteImport.update({
 const VirtualRoute = VirtualRouteImport.update({
   id: '/virtual',
   path: '/virtual',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TournamentRoute = TournamentRouteImport.update({
+  id: '/tournament',
+  path: '/tournament',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TasksRoute = TasksRouteImport.update({
@@ -127,6 +134,11 @@ const CheckoutRoute = CheckoutRouteImport.update({
   path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -152,11 +164,6 @@ const VirtualHistoryRoute = VirtualHistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => VirtualRoute,
 } as any)
-const TournamentIdRoute = TournamentIdRouteImport.update({
-  id: '/tournament/$id',
-  path: '/tournament/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TicketIdRoute = TicketIdRouteImport.update({
   id: '/ticket/$id',
   path: '/ticket/$id',
@@ -172,12 +179,18 @@ const ApiPublicVirtualTickRoute = ApiPublicVirtualTickRouteImport.update({
   path: '/api/public/virtual-tick',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksSendPushRoute = ApiPublicHooksSendPushRouteImport.update({
+  id: '/api/public/hooks/send-push',
+  path: '/api/public/hooks/send-push',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/admin': typeof AdminRoute
+  '/chat': typeof ChatRoute
   '/checkout': typeof CheckoutRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -193,20 +206,22 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/support': typeof SupportRoute
   '/tasks': typeof TasksRoute
+  '/tournament': typeof TournamentRoute
   '/virtual': typeof VirtualRouteWithChildren
   '/watchlist': typeof WatchlistRoute
   '/withdraw': typeof WithdrawRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/ticket/$id': typeof TicketIdRoute
-  '/tournament/$id': typeof TournamentIdRoute
   '/virtual/history': typeof VirtualHistoryRoute
   '/api/public/virtual-tick': typeof ApiPublicVirtualTickRoute
+  '/api/public/hooks/send-push': typeof ApiPublicHooksSendPushRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/admin': typeof AdminRoute
+  '/chat': typeof ChatRoute
   '/checkout': typeof CheckoutRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -222,14 +237,15 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/support': typeof SupportRoute
   '/tasks': typeof TasksRoute
+  '/tournament': typeof TournamentRoute
   '/virtual': typeof VirtualRouteWithChildren
   '/watchlist': typeof WatchlistRoute
   '/withdraw': typeof WithdrawRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/ticket/$id': typeof TicketIdRoute
-  '/tournament/$id': typeof TournamentIdRoute
   '/virtual/history': typeof VirtualHistoryRoute
   '/api/public/virtual-tick': typeof ApiPublicVirtualTickRoute
+  '/api/public/hooks/send-push': typeof ApiPublicHooksSendPushRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -237,6 +253,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/admin': typeof AdminRoute
+  '/chat': typeof ChatRoute
   '/checkout': typeof CheckoutRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -252,14 +269,15 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/support': typeof SupportRoute
   '/tasks': typeof TasksRoute
+  '/tournament': typeof TournamentRoute
   '/virtual': typeof VirtualRouteWithChildren
   '/watchlist': typeof WatchlistRoute
   '/withdraw': typeof WithdrawRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/ticket/$id': typeof TicketIdRoute
-  '/tournament/$id': typeof TournamentIdRoute
   '/virtual/history': typeof VirtualHistoryRoute
   '/api/public/virtual-tick': typeof ApiPublicVirtualTickRoute
+  '/api/public/hooks/send-push': typeof ApiPublicHooksSendPushRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -268,6 +286,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/achievements'
     | '/admin'
+    | '/chat'
     | '/checkout'
     | '/dashboard'
     | '/forgot-password'
@@ -283,20 +302,22 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/support'
     | '/tasks'
+    | '/tournament'
     | '/virtual'
     | '/watchlist'
     | '/withdraw'
     | '/matches/$matchId'
     | '/ticket/$id'
-    | '/tournament/$id'
     | '/virtual/history'
     | '/api/public/virtual-tick'
+    | '/api/public/hooks/send-push'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
     | '/achievements'
     | '/admin'
+    | '/chat'
     | '/checkout'
     | '/dashboard'
     | '/forgot-password'
@@ -312,20 +333,22 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/support'
     | '/tasks'
+    | '/tournament'
     | '/virtual'
     | '/watchlist'
     | '/withdraw'
     | '/matches/$matchId'
     | '/ticket/$id'
-    | '/tournament/$id'
     | '/virtual/history'
     | '/api/public/virtual-tick'
+    | '/api/public/hooks/send-push'
   id:
     | '__root__'
     | '/'
     | '/about'
     | '/achievements'
     | '/admin'
+    | '/chat'
     | '/checkout'
     | '/dashboard'
     | '/forgot-password'
@@ -341,14 +364,15 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/support'
     | '/tasks'
+    | '/tournament'
     | '/virtual'
     | '/watchlist'
     | '/withdraw'
     | '/matches/$matchId'
     | '/ticket/$id'
-    | '/tournament/$id'
     | '/virtual/history'
     | '/api/public/virtual-tick'
+    | '/api/public/hooks/send-push'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -356,6 +380,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AchievementsRoute: typeof AchievementsRoute
   AdminRoute: typeof AdminRoute
+  ChatRoute: typeof ChatRoute
   CheckoutRoute: typeof CheckoutRoute
   DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
@@ -371,12 +396,13 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SupportRoute: typeof SupportRoute
   TasksRoute: typeof TasksRoute
+  TournamentRoute: typeof TournamentRoute
   VirtualRoute: typeof VirtualRouteWithChildren
   WatchlistRoute: typeof WatchlistRoute
   WithdrawRoute: typeof WithdrawRoute
   TicketIdRoute: typeof TicketIdRoute
-  TournamentIdRoute: typeof TournamentIdRoute
   ApiPublicVirtualTickRoute: typeof ApiPublicVirtualTickRoute
+  ApiPublicHooksSendPushRoute: typeof ApiPublicHooksSendPushRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -400,6 +426,13 @@ declare module '@tanstack/react-router' {
       path: '/virtual'
       fullPath: '/virtual'
       preLoaderRoute: typeof VirtualRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tournament': {
+      id: '/tournament'
+      path: '/tournament'
+      fullPath: '/tournament'
+      preLoaderRoute: typeof TournamentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tasks': {
@@ -507,6 +540,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -542,13 +582,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VirtualHistoryRouteImport
       parentRoute: typeof VirtualRoute
     }
-    '/tournament/$id': {
-      id: '/tournament/$id'
-      path: '/tournament/$id'
-      fullPath: '/tournament/$id'
-      preLoaderRoute: typeof TournamentIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/ticket/$id': {
       id: '/ticket/$id'
       path: '/ticket/$id'
@@ -568,6 +601,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/virtual-tick'
       fullPath: '/api/public/virtual-tick'
       preLoaderRoute: typeof ApiPublicVirtualTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/send-push': {
+      id: '/api/public/hooks/send-push'
+      path: '/api/public/hooks/send-push'
+      fullPath: '/api/public/hooks/send-push'
+      preLoaderRoute: typeof ApiPublicHooksSendPushRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -600,6 +640,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AchievementsRoute: AchievementsRoute,
   AdminRoute: AdminRoute,
+  ChatRoute: ChatRoute,
   CheckoutRoute: CheckoutRoute,
   DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
@@ -615,12 +656,13 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SupportRoute: SupportRoute,
   TasksRoute: TasksRoute,
+  TournamentRoute: TournamentRoute,
   VirtualRoute: VirtualRouteWithChildren,
   WatchlistRoute: WatchlistRoute,
   WithdrawRoute: WithdrawRoute,
   TicketIdRoute: TicketIdRoute,
-  TournamentIdRoute: TournamentIdRoute,
   ApiPublicVirtualTickRoute: ApiPublicVirtualTickRoute,
+  ApiPublicHooksSendPushRoute: ApiPublicHooksSendPushRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
