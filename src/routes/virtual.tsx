@@ -68,9 +68,9 @@ const matchSelect = `
 `;
 
 function VirtualPage() {
-  const [live, setLive] = useState<MatchRow[]>([]);
-  const [upcoming, setUpcoming] = useState<MatchRow[]>([]);
-  const [recent, setRecent] = useState<MatchRow[]>([]);
+  const [live, setLive] = useState<VirtualMatch[]>([]);
+  const [upcoming, setUpcoming] = useState<VirtualMatch[]>([]);
+  const [recent, setRecent] = useState<VirtualMatch[]>([]);
   const [cycle, setCycle] = useState<CycleState>({
     running: false,
     animSec: 30,
