@@ -721,7 +721,7 @@ function VirtualRoundCard({ match, animSec }: { match: VirtualMatch; animSec: nu
       is_virtual: true,
       virtual_round_batch_id: match.virtual_round_batch_id ?? match.id,
     });
-    setOpen(true);
+    toast.success(`${o.label} added · ${Number(o.value).toFixed(2)}`, { duration: 1200 });
   }
 
   return (
