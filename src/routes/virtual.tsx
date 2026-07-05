@@ -17,6 +17,12 @@ import {
   CheckCircle2,
   PauseCircle,
   Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  BarChart3,
+  Plus,
+  ArrowLeft,
+  User as UserIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TeamLogo } from "@/components/TeamLogo";
