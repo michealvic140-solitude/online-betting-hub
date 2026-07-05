@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState, Fragment, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { Layout } from "@/components/Layout";
 import { PageShell } from "@/components/PageShell";
 import { Card } from "@/components/ui/card";
@@ -263,39 +263,37 @@ function VirtualPage() {
               >
                 {[0, 1].map((c) => {
                   const m = row[c];
-                  if (!m) {
+                  const off = c * 4;
+                  if (!m)
                     return (
-                      <Fragment key={c}>
-                        <span />
-                        <span className="text-muted-foreground/40">—</span>
-                        <span />
-                        <span />
-                      </Fragment>
+                      <>
+                        <span key={`e${off}-a`} />
+                        <span key={`e${off}-b`} className="text-muted-foreground/40">—</span>
+                        <span key={`e${off}-c`} />
+                        <span key={`e${off}-d`} />
+                      </>
                     );
-                  }
                   const ft = m.status === "ended";
-                  const liveNow = m.status === "live";
-                  const showScore = ft || liveNow;
                   return (
-                    <Fragment key={c}>
-                      <span className={`text-[9px] truncate ${liveNow ? "text-destructive animate-pulse" : "text-muted-foreground/70"}`}>●</span>
-                      <div className="min-w-0">
+                    <>
+                      <span key={`k${off}-a`} className="text-[9px] text-muted-foreground/70 truncate">●</span>
+                      <div key={`k${off}-b`} className="min-w-0">
                         <div className="truncate font-semibold text-foreground/90">{m.home_team?.name ?? "Gang A"}</div>
                         <div className="truncate text-muted-foreground">{m.away_team?.name ?? "Gang B"}</div>
                       </div>
-                      <div className="text-center font-mono tabular-nums">
-                        <div className={showScore ? (ft ? "text-primary font-bold" : "text-destructive font-bold") : "text-muted-foreground/50"}>
-                          {showScore ? m.home_score : "-"}
+                      <div key={`k${off}-c`} className="text-center font-mono tabular-nums">
+                        <div className={ft ? "text-primary font-bold" : "text-muted-foreground/50"}>
+                          {ft ? m.home_score : "-"}
                         </div>
-                        <div className={showScore ? (ft ? "text-primary font-bold" : "text-destructive font-bold") : "text-muted-foreground/50"}>
-                          {showScore ? m.away_score : "-"}
+                        <div className={ft ? "text-primary font-bold" : "text-muted-foreground/50"}>
+                          {ft ? m.away_score : "-"}
                         </div>
                       </div>
-                      <div className="text-center font-mono tabular-nums text-muted-foreground/50">
+                      <div key={`k${off}-d`} className="text-center font-mono tabular-nums text-muted-foreground/50">
                         <div>-</div>
                         <div>-</div>
                       </div>
-                    </Fragment>
+                    </>
                   );
                 })}
               </div>
@@ -543,7 +541,7 @@ function MarketRow({ match, marketName }: { match: VirtualMatch; marketName: str
       is_virtual: true,
       virtual_round_batch_id: match.virtual_round_batch_id ?? match.id,
     });
-    toast.success(`${o.label} added · ${Number(o.value).toFixed(2)}`, { duration: 1200 });
+    setOpen(true);
   }
 
   // Pick up to three primary odds (1/X/2 style)
@@ -721,7 +719,7 @@ function VirtualRoundCard({ match, animSec }: { match: VirtualMatch; animSec: nu
       is_virtual: true,
       virtual_round_batch_id: match.virtual_round_batch_id ?? match.id,
     });
-    toast.success(`${o.label} added · ${Number(o.value).toFixed(2)}`, { duration: 1200 });
+    setOpen(true);
   }
 
   return (
