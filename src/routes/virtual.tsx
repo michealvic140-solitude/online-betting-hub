@@ -263,37 +263,39 @@ function VirtualPage() {
               >
                 {[0, 1].map((c) => {
                   const m = row[c];
-                  const off = c * 4;
-                  if (!m)
+                  if (!m) {
                     return (
-                      <>
-                        <span key={`e${off}-a`} />
-                        <span key={`e${off}-b`} className="text-muted-foreground/40">—</span>
-                        <span key={`e${off}-c`} />
-                        <span key={`e${off}-d`} />
-                      </>
+                      <Fragment key={c}>
+                        <span />
+                        <span className="text-muted-foreground/40">—</span>
+                        <span />
+                        <span />
+                      </Fragment>
                     );
+                  }
                   const ft = m.status === "ended";
+                  const liveNow = m.status === "live";
+                  const showScore = ft || liveNow;
                   return (
-                    <>
-                      <span key={`k${off}-a`} className="text-[9px] text-muted-foreground/70 truncate">●</span>
-                      <div key={`k${off}-b`} className="min-w-0">
+                    <Fragment key={c}>
+                      <span className={`text-[9px] truncate ${liveNow ? "text-destructive animate-pulse" : "text-muted-foreground/70"}`}>●</span>
+                      <div className="min-w-0">
                         <div className="truncate font-semibold text-foreground/90">{m.home_team?.name ?? "Gang A"}</div>
                         <div className="truncate text-muted-foreground">{m.away_team?.name ?? "Gang B"}</div>
                       </div>
-                      <div key={`k${off}-c`} className="text-center font-mono tabular-nums">
-                        <div className={ft ? "text-primary font-bold" : "text-muted-foreground/50"}>
-                          {ft ? m.home_score : "-"}
+                      <div className="text-center font-mono tabular-nums">
+                        <div className={showScore ? (ft ? "text-primary font-bold" : "text-destructive font-bold") : "text-muted-foreground/50"}>
+                          {showScore ? m.home_score : "-"}
                         </div>
-                        <div className={ft ? "text-primary font-bold" : "text-muted-foreground/50"}>
-                          {ft ? m.away_score : "-"}
+                        <div className={showScore ? (ft ? "text-primary font-bold" : "text-destructive font-bold") : "text-muted-foreground/50"}>
+                          {showScore ? m.away_score : "-"}
                         </div>
                       </div>
-                      <div key={`k${off}-d`} className="text-center font-mono tabular-nums text-muted-foreground/50">
+                      <div className="text-center font-mono tabular-nums text-muted-foreground/50">
                         <div>-</div>
                         <div>-</div>
                       </div>
-                    </>
+                    </Fragment>
                   );
                 })}
               </div>
