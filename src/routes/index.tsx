@@ -9,6 +9,7 @@ import { MatchCardLive } from "@/components/MatchCardLive";
 import { EventBanner } from "@/components/EventBanner";
 import { AnnouncementSlider, HighlightsRow, AdsRow } from "@/components/HomeContent";
 import { Bet9jaHome } from "@/components/Bet9jaHome";
+import { PopularRail, FeaturedTabsBoard, LotterySection, NewsCard } from "@/components/HomeIlotSections";
 import { GrandPrizeWinners } from "@/components/GrandPrizeWinners";
 import { HotBets } from "@/components/HotBets";
 import { SeasonBanner } from "@/components/SeasonBanner";
