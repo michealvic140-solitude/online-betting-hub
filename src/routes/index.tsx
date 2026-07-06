@@ -117,6 +117,19 @@ function Index() {
       <SeasonBanner />
       <Spotlight />
 
+      {/* iLOTBET-style board — Popular rail + Featured/Highlight/Gifts tabs + Lottery + News.
+          All powered by existing tables so admins configure via Content/Broadcast/Settings quick actions. */}
+      <section className="container mt-6 grid gap-4 lg:grid-cols-[200px_1fr]">
+        <PopularRail settings={settings} />
+        <div className="space-y-4 min-w-0">
+          <FeaturedTabsBoard />
+          <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+            <LotterySection settings={settings} />
+            <NewsCard />
+          </div>
+        </div>
+      </section>
+
       {/* Highlights → Announcements → Ads → Bet9ja-style Matches Board → Futures */}
       <HighlightsRow />
       <AnnouncementSlider />
