@@ -116,10 +116,15 @@ function Index() {
       <SeasonBanner />
       <Spotlight />
 
-      {/* Highlights → Announcements → Ads → Matches */}
+      {/* Highlights → Announcements → Ads → Bet9ja-style Matches Board → Futures */}
       <HighlightsRow />
       <AnnouncementSlider />
       <AdsRow />
+      <Bet9jaHome
+        live={live}
+        upcoming={upcoming}
+        categoryGroups={categoryGroups.map(([id, g]) => ({ id, name: g.name, icon: g.icon, items: g.items }))}
+      />
       <FuturesSection title={settings?.futures_section_title || "TOURNAMENT FUTURES"} markets={futures} maxSelections={Number(settings?.futures_max_selections ?? 1)} />
 
       <BookingCodeFab />
