@@ -19,7 +19,7 @@ export function LiveCategoryTabs({ matches }: { matches: MatchRow[] }) {
   const buckets = useMemo(() => {
     const b: Record<Key, MatchRow[]> = { duel: [], squad: [], ranked: [], tournament: [], virtual: [] };
     for (const m of matches) {
-      if ((m as any).is_virtual || m.match_kind === "virtual") { b.virtual.push(m); continue; }
+      if ((m as any).is_virtual) { b.virtual.push(m); continue; }
       if (m.match_kind === "future") { b.tournament.push(m); continue; }
       const cat = (m.category?.name ?? "").toLowerCase();
       if (cat.includes("squad")) b.squad.push(m);
