@@ -98,6 +98,31 @@ export function BetVoucher({ bet, sels, statusBadge, copy, shareCode }: {
   copy: (t: string) => void; shareCode: () => void;
 }) {
   const status = bet.status as string;
+  const { add: addToSlip, setOpen: openSlip } = useBetSlip();
+  const nav = useNavigate();
+  function rebet() {
+    if (!sels.length) return;
+    let added = 0;
+    sels.forEach((s: any) => {
+      if (!s.match_id || !s.market_id || !s.odd_id) return;
+      addToSlip({
+        match_id: s.match_id,
+        match_name: s.matches?.name || `${s.matches?.home_team?.name ?? ""} vs ${s.matches?.away_team?.name ?? ""}`.trim(),
+        market_id: s.market_id,
+        market_name: s.markets?.name || "Market",
+        odd_id: s.odd_id,
+        selection_label: s.selection_label,
+        odds: Number(s.locked_odds),
+        is_virtual: !!s.matches?.is_virtual,
+        is_future: s.matches?.match_kind === "future",
+      });
+      added++;
+    });
+    if (added === 0) { toast.error("Nothing to rebet"); return; }
+    openSlip(true);
+    toast.success(`Loaded ${added} selection${added === 1 ? "" : "s"} into your slip`);
+    nav({ to: "/" });
+  }
   // A selection only counts as a win once its match has ENDED (no cash-out while live).
   function endedWin(s: any): boolean {
     if (s.result === "won") return true;
