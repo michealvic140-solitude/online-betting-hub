@@ -47,6 +47,7 @@ import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { ClansAdminPanel } from "@/components/admin/ClansAdminPanel";
 import { TopBetsPanel } from "@/components/admin/TopBetsPanel";
 import { TournamentAdminPanel } from "@/components/admin/TournamentAdminPanel";
+import { HomepagePanel } from "@/components/admin/HomepagePanel";
 import { seedLegacyUsers } from "@/lib/seed-users.functions";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { loadStandings, type LbRow } from "@/lib/leaderboard";
@@ -199,6 +200,7 @@ function AdminPage() {
             <TabsContent value="topbets" className="mt-4"><TopBetsPanel /></TabsContent>
             <TabsContent value="tournaments" className="mt-4"><TournamentAdminPanel /></TabsContent>
             <TabsContent value="attendance" className="mt-4"><AttendancePanel /></TabsContent>
+            <TabsContent value="homepage" className="mt-4"><HomepagePanel /></TabsContent>
           </Tabs>
         </div>
       </main>
@@ -3258,6 +3260,7 @@ const QUICK_ACTIONS: { i: any; l: string; t: string }[] = [
   { i: Wallet, l: "Withdrawals", t: "withdrawals" },
   { i: Trophy, l: "Won Bets", t: "wonbets" },
   { i: X, l: "Lost Bets", t: "lostbets" },
+  { i: Megaphone, l: "Homepage", t: "homepage" },
 ];
 
 const QA_PALETTE = [
