@@ -12,6 +12,10 @@ import { GrandPrizeWinners } from "@/components/GrandPrizeWinners";
 import { HotBets } from "@/components/HotBets";
 import { SeasonBanner } from "@/components/SeasonBanner";
 import { Spotlight } from "@/components/Spotlight";
+import { PopularRail } from "@/components/home/PopularRail";
+import { FeaturedTabs } from "@/components/home/FeaturedTabs";
+import { LotteryNewsCluster } from "@/components/home/LotteryNewsCluster";
+import { LiveCategoryTabs } from "@/components/home/LiveCategoryTabs";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
 import { Crosshair, Flame, Trophy, ChevronRight, Skull, Coins, Ticket as TicketIcon, ClipboardPaste, X } from "lucide-react";
@@ -114,6 +118,16 @@ function Index() {
       <EventBanner />
       <SeasonBanner />
       <Spotlight />
+
+      {/* NEW: Popular rail + Featured/Highlight/Gifts tabs + Live category tabs + Lottery/News/Winners cluster */}
+      <section className="container mt-4 grid lg:grid-cols-[220px_1fr] gap-4">
+        <div className="hidden lg:block lg:sticky lg:top-20 self-start"><PopularRail /></div>
+        <div className="min-w-0">
+          <FeaturedTabs />
+          <LiveCategoryTabs matches={matches} />
+          <LotteryNewsCluster />
+        </div>
+      </section>
 
       {/* Highlights → Announcements → Ads → Matches */}
       <HighlightsRow />

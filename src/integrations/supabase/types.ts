@@ -898,6 +898,153 @@ export type Database = {
         }
         Relationships: []
       }
+      home_gifts: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          link_url: string | null
+          sort_order: number
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          link_url?: string | null
+          sort_order?: number
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          link_url?: string | null
+          sort_order?: number
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      home_lottery_draws: {
+        Row: {
+          buy_url: string | null
+          created_at: string
+          draws_at: string | null
+          id: string
+          is_active: boolean
+          name: string
+          numbers: string | null
+          prize_label: string
+          results: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          buy_url?: string | null
+          created_at?: string
+          draws_at?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          numbers?: string | null
+          prize_label: string
+          results?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          buy_url?: string | null
+          created_at?: string
+          draws_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          numbers?: string | null
+          prize_label?: string
+          results?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      home_news: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          link_url: string | null
+          sort_order: number
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          link_url?: string | null
+          sort_order?: number
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          link_url?: string | null
+          sort_order?: number
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      home_popular_links: {
+        Row: {
+          created_at: string
+          href: string
+          icon: string | null
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          href: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          href?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       house_transactions: {
         Row: {
           actor_id: string | null
