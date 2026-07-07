@@ -119,6 +119,16 @@ function Index() {
       <SeasonBanner />
       <Spotlight />
 
+      {/* NEW: Popular rail + Featured/Highlight/Gifts tabs + Live category tabs + Lottery/News/Winners cluster */}
+      <section className="container mt-4 grid lg:grid-cols-[220px_1fr] gap-4">
+        <div className="hidden lg:block lg:sticky lg:top-20 self-start"><PopularRail /></div>
+        <div className="min-w-0">
+          <FeaturedTabs />
+          <LiveCategoryTabs matches={matches} />
+          <LotteryNewsCluster />
+        </div>
+      </section>
+
       {/* Highlights → Announcements → Ads → Matches */}
       <HighlightsRow />
       <AnnouncementSlider />
