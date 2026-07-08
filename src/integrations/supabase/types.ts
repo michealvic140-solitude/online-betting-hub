@@ -2102,13 +2102,54 @@ export type Database = {
           },
         ]
       }
+      push_delivery_log: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          last_error: string | null
+          notification_id: string
+          removed_count: number
+          sent_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          last_error?: string | null
+          notification_id: string
+          removed_count?: number
+          sent_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          last_error?: string | null
+          notification_id?: string
+          removed_count?: number
+          sent_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_delivery_log_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: true
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       push_subscriptions: {
         Row: {
           auth_key: string
           created_at: string
+          disabled_at: string | null
           enabled: boolean
           endpoint: string
+          failure_count: number
           id: string
+          last_seen_at: string
           p256dh: string
           user_agent: string | null
           user_id: string
@@ -2116,9 +2157,12 @@ export type Database = {
         Insert: {
           auth_key: string
           created_at?: string
+          disabled_at?: string | null
           enabled?: boolean
           endpoint: string
+          failure_count?: number
           id?: string
+          last_seen_at?: string
           p256dh: string
           user_agent?: string | null
           user_id: string
@@ -2126,9 +2170,12 @@ export type Database = {
         Update: {
           auth_key?: string
           created_at?: string
+          disabled_at?: string | null
           enabled?: boolean
           endpoint?: string
+          failure_count?: number
           id?: string
+          last_seen_at?: string
           p256dh?: string
           user_agent?: string | null
           user_id?: string
@@ -3091,32 +3138,50 @@ export type Database = {
       }
       user_tasks: {
         Row: {
+          banner_url: string | null
           completed_at: string | null
           created_at: string
           description: string | null
+          ends_at: string | null
           id: string
+          period: string | null
+          progress: number
+          reward_kind: string
           reward_tokens: number
           status: string
+          target_progress: number
           title: string
           user_id: string
         }
         Insert: {
+          banner_url?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
+          ends_at?: string | null
           id?: string
+          period?: string | null
+          progress?: number
+          reward_kind?: string
           reward_tokens?: number
           status?: string
+          target_progress?: number
           title: string
           user_id: string
         }
         Update: {
+          banner_url?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
+          ends_at?: string | null
           id?: string
+          period?: string | null
+          progress?: number
+          reward_kind?: string
           reward_tokens?: number
           status?: string
+          target_progress?: number
           title?: string
           user_id?: string
         }
@@ -3726,6 +3791,7 @@ export type Database = {
       redeem_promo_code: { Args: { _code: string }; Returns: Json }
       redeem_referral_code: { Args: { _code: string }; Returns: Json }
       redeem_shop_item: { Args: { _item_id: string }; Returns: Json }
+      resettle_won_bets: { Args: never; Returns: number }
       resolve_virtual_round: {
         Args: {
           _away_score?: number
