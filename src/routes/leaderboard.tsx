@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy } from "lucide-react";
+import { Trophy, Medal as MedalIcon } from "lucide-react";
 import { loadStandings, type LbRow } from "@/lib/leaderboard";
 import { supabase } from "@/integrations/supabase/client";
 import leaderboardHeaderAsset from "@/assets/leaderboard-header.png.asset.json";
@@ -33,10 +33,14 @@ export const Route = createFileRoute("/leaderboard")({
 
 function Medal({ i }: { i: number }) {
   const tiers = ["from-amber-300 to-yellow-600", "from-slate-200 to-slate-400", "from-amber-600 to-orange-800"];
+  const medalColors = ["text-yellow-300", "text-slate-200", "text-amber-600"];
   if (i < 3) {
     return (
-      <span className={`inline-grid place-items-center h-8 w-8 rounded-lg bg-gradient-to-b ${tiers[i]} text-black font-black text-sm shadow-[0_0_14px_-2px_rgba(212,175,55,0.6)] border border-white/30`}>
-        {i + 1}
+      <span className="inline-flex items-center gap-1.5">
+        <span className={`inline-grid place-items-center h-8 w-8 rounded-lg bg-gradient-to-b ${tiers[i]} text-black font-black text-sm shadow-[0_0_14px_-2px_rgba(212,175,55,0.6)] border border-white/30`}>
+          {i + 1}
+        </span>
+        <MedalIcon className={`h-5 w-5 ${medalColors[i]} drop-shadow-[0_0_6px_rgba(212,175,55,0.6)]`} />
       </span>
     );
   }
@@ -85,7 +89,7 @@ function Page() {
             <img src={headerUrl} alt="Lomita Shooters League Leaderboard" className="w-full h-auto block" />
           </div>
         ) : (
-          <div className="relative mb-6 rounded-2xl overflow-hidden glass-ice border-2 border-amber-400/60 shadow-[0_0_40px_-10px_rgba(212,175,55,0.55)]">
+          <div className="relative mb-6 rounded-2xl overflow-hidden bg-black/20 backdrop-blur-[2px] border-2 border-amber-400/60 shadow-[0_0_40px_-10px_rgba(212,175,55,0.55)]">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/10 to-transparent" />
             <div className="relative flex items-center gap-3 px-5 py-5">
               <span className="grid place-items-center h-12 w-12 rounded-xl border border-amber-400/40 bg-black/40 shadow-[0_0_20px_-4px_rgba(212,175,55,0.6)]">
@@ -97,7 +101,7 @@ function Page() {
         )}
 
         <Tabs defaultValue="gangs">
-          <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20">
+          <TabsList className="bg-black/25 backdrop-blur-[2px] border border-amber-400/40">
             <TabsTrigger value="gangs">Top Gangs / Factions</TabsTrigger>
             <TabsTrigger value="shooters">Top Shooters</TabsTrigger>
           </TabsList>
@@ -126,11 +130,11 @@ function Board({
   emptyText: string;
 }) {
   return (
-    <div className="relative rounded-2xl overflow-hidden glass-ice border border-primary/20">
+    <div className="relative rounded-2xl overflow-hidden bg-black/15 backdrop-blur-[2px] border-2 border-amber-400/55 shadow-[0_0_40px_-12px_rgba(212,175,55,0.5)]">
       <div className="relative overflow-x-auto">
         <table className="w-full text-sm min-w-[640px]">
           <thead>
-            <tr className="text-left text-[11px] uppercase tracking-widest text-amber-200/80 border-b border-amber-400/25 bg-white/5">
+            <tr className="text-left text-[11px] uppercase tracking-widest text-amber-200/80 border-b border-amber-400/30 bg-black/20">
               <Th>Rank</Th><Th>{firstCol}</Th><Th>{secondCol}</Th>
               <Th right>TS</Th><Th right>W</Th><Th right>L</Th><Th right>D</Th><Th right>P</Th><Th right>PTS</Th>
             </tr>
@@ -138,7 +142,7 @@ function Board({
           <tbody>
             {rows.length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">{emptyText}</td></tr>}
             {rows.map((r, i) => (
-              <tr key={r.name} className="glass-ice-row border-b border-white/5 hover:bg-amber-400/10 transition-colors">
+              <tr key={r.name} className="border-b border-amber-400/10 hover:bg-amber-400/10 transition-colors">
                 <Td><Medal i={i} /></Td>
                 <Td>{firstPick ? <span className="font-bold text-primary/90">{firstPick(r)}</span> : <span className="font-bold">{pick(r)}</span>}</Td>
                 <Td><span className={firstPick ? "font-bold" : "text-muted-foreground"}>{firstPick ? pick(r) : (r.top_player || "—")}</span></Td>

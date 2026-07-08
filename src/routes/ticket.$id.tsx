@@ -1,8 +1,7 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useBetSlip } from "@/contexts/BetSlipContext";
 import { Layout } from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TeamLogo } from "@/components/TeamLogo";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { Sparkles, Send, ArrowLeft, Ticket as TicketIcon, Copy, Check, X, Image as ImageIcon, Share2, Trash2, Lock as LockIcon, Clock as ClockIcon, ShieldCheck, Trophy, Coins, TrendingUp, Gem, Calendar, CalendarCheck, ShieldAlert, LineChart, RotateCw, Info } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Ticket as TicketIcon, Copy, Check, X, Image as ImageIcon, Share2, Trash2, Lock as LockIcon, Clock as ClockIcon, ShieldCheck, Trophy, Coins, TrendingUp, Gem, Calendar, CalendarCheck, ShieldAlert } from "lucide-react";
 import { GangLogo } from "@/components/GangLogo";
 import { toast } from "sonner";
 import lslLogo from "@/assets/lsl-logo.png";
@@ -44,7 +43,7 @@ function TicketPage() {
 
   async function loadBet() {
     const { data, error } = await supabase.from("bets")
-      .select("*, bet_selections(*, matches!match_id(name, status, home_score, away_score, is_virtual, match_kind, home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url)), markets!market_id(name), odds!odd_id(future_status,future_next_title,future_next_at,future_progress,future_emblem_url,future_candidate_type))")
+      .select("*, bet_selections(*, matches!match_id(id, name, status, start_time, home_score, away_score, is_virtual, match_kind, home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url)), markets!market_id(name), odds!odd_id(future_status,future_next_title,future_next_at,future_progress,future_emblem_url,future_candidate_type))")
       .eq("id", id).maybeSingle();
     if (error) { console.error("loadBet error", error); return; }
     if (!data) return;
@@ -98,31 +97,6 @@ export function BetVoucher({ bet, sels, statusBadge, copy, shareCode }: {
   copy: (t: string) => void; shareCode: () => void;
 }) {
   const status = bet.status as string;
-  const { add: addToSlip, setOpen: openSlip } = useBetSlip();
-  const nav = useNavigate();
-  function rebet() {
-    if (!sels.length) return;
-    let added = 0;
-    sels.forEach((s: any) => {
-      if (!s.match_id || !s.market_id || !s.odd_id) return;
-      addToSlip({
-        match_id: s.match_id,
-        match_name: s.matches?.name || `${s.matches?.home_team?.name ?? ""} vs ${s.matches?.away_team?.name ?? ""}`.trim(),
-        market_id: s.market_id,
-        market_name: s.markets?.name || "Market",
-        odd_id: s.odd_id,
-        selection_label: s.selection_label,
-        odds: Number(s.locked_odds),
-        is_virtual: !!s.matches?.is_virtual,
-        is_future: s.matches?.match_kind === "future",
-      });
-      added++;
-    });
-    if (added === 0) { toast.error("Nothing to rebet"); return; }
-    openSlip(true);
-    toast.success(`Loaded ${added} selection${added === 1 ? "" : "s"} into your slip`);
-    nav({ to: "/" });
-  }
   // A selection only counts as a win once its match has ENDED (no cash-out while live).
   function endedWin(s: any): boolean {
     if (s.result === "won") return true;
@@ -134,26 +108,53 @@ export function BetVoucher({ bet, sels, statusBadge, copy, shareCode }: {
     const lead = m.home_score > m.away_score ? m.home_team?.name : m.away_score > m.home_score ? m.away_team?.name : "Draw";
     return s.selection_label === lead;
   }
+  // Resolve a single selection's outcome even before the backend settles the whole bet,
+  // so an ended match never lingers on "PENDING".
+  function selResult(s: any): "won" | "lost" | "pending" {
+    if (s.result === "won") return "won";
+    if (s.result === "lost") return "lost";
+    const m = s.matches;
+    if (m?.match_kind === "future") {
+      if (s.odds?.future_status === "winner") return "won";
+      if (["disqualified", "eliminated", "settled_lost"].includes(s.odds?.future_status)) return "lost";
+      return "pending";
+    }
+    if (!m || m.status !== "ended") return "pending";
+    if (s.markets?.name === "Correct Score") return s.selection_label === `${m.home_score}-${m.away_score}` ? "won" : "lost";
+    const lead = m.home_score > m.away_score ? m.home_team?.name : m.away_score > m.home_score ? m.away_team?.name : "Draw";
+    return s.selection_label === lead ? "won" : "lost";
+  }
   // Cash-out only when every match has ended and every selection won.
   const allWon = sels.length > 0 && sels.every(endedWin);
   const cashoutValue = Number(bet.potential_payout);
   const isVirtualTicket = sels.some((s: any) => s.matches?.is_virtual);
   const isFutureTicket = sels.some((s: any) => s.matches?.match_kind === "future");
+  // Derive an effective ticket status: if the backend hasn't settled yet but every
+  // leg has already resolved, reflect the real result instead of showing PENDING.
+  const resolved = sels.map(selResult);
+  const anyLost = resolved.includes("lost");
+  const allResolvedWon = sels.length > 0 && resolved.every((r) => r === "won");
+  const effectiveStatus =
+    status === "won" || status === "lost" || status === "cashed_out" || status === "void" || status === "refunded" || status === "suspended"
+      ? status
+      : anyLost ? "lost"
+      : allResolvedWon ? "won"
+      : "open";
   const statusBarCls =
-    status === "won" || status === "cashed_out" ? "voucher-status-bar-won"
-    : status === "lost" ? "voucher-status-bar-lost"
+    effectiveStatus === "won" || effectiveStatus === "cashed_out" ? "voucher-status-bar-won"
+    : effectiveStatus === "lost" ? "voucher-status-bar-lost"
     : "voucher-status-bar-pending";
   const statusBarIcon =
-    status === "won" || status === "cashed_out" ? <Trophy className="h-4 w-4" />
-    : status === "lost" ? <X className="h-4 w-4" />
+    effectiveStatus === "won" || effectiveStatus === "cashed_out" ? <Trophy className="h-4 w-4" />
+    : effectiveStatus === "lost" ? <X className="h-4 w-4" />
     : <ClockIcon className="h-4 w-4" />;
   const statusBarText =
-    status === "won" ? "BET STATUS: CONGRATULATIONS, YOU WON!"
-    : status === "cashed_out" ? "BET STATUS: CASHED OUT SUCCESSFULLY"
-    : status === "lost" ? "BET STATUS: BETTER LUCK NEXT ROUND"
-    : status === "void" ? "BET STATUS: TICKET VOIDED"
-    : status === "refunded" ? "BET STATUS: REFUNDED"
-    : status === "suspended" ? "BET STATUS: SUSPENDED BY ADMIN"
+    effectiveStatus === "won" ? (status === "won" ? "BET STATUS: CONGRATULATIONS, YOU WON!" : "BET STATUS: ALL LEGS WON · SETTLING…")
+    : effectiveStatus === "cashed_out" ? "BET STATUS: CASHED OUT SUCCESSFULLY"
+    : effectiveStatus === "lost" ? "BET STATUS: BETTER LUCK NEXT ROUND"
+    : effectiveStatus === "void" ? "BET STATUS: TICKET VOIDED"
+    : effectiveStatus === "refunded" ? "BET STATUS: REFUNDED"
+    : effectiveStatus === "suspended" ? "BET STATUS: SUSPENDED BY ADMIN"
     : "BET STATUS: PENDING SETTLEMENT";
 
   return (
@@ -161,7 +162,7 @@ export function BetVoucher({ bet, sels, statusBadge, copy, shareCode }: {
       {/* Outer ambient glow */}
       <div className="absolute -inset-6 rounded-[40px] bg-[radial-gradient(circle_at_30%_20%,oklch(0.85_0.22_152/0.30),transparent_60%),radial-gradient(circle_at_80%_80%,oklch(0.82_0.17_90/0.22),transparent_60%)] blur-3xl pointer-events-none" />
 
-      <div className="relative rounded-[28px] voucher-frame voucher-bg overflow-hidden transition-transform duration-500 hover:[transform:perspective(1600px)_rotateX(0.6deg)_rotateY(-0.6deg)_translateY(-2px)]">
+      <div className="relative rounded-[32px] voucher-frame voucher-bg overflow-hidden transition-transform duration-500 hover:[transform:perspective(1600px)_rotateX(0.6deg)_rotateY(-0.6deg)_translateY(-2px)]">
         {/* LSL logo watermark behind everything */}
         <div
           className="pointer-events-none absolute inset-0 grid place-items-center opacity-[0.08]"
@@ -193,41 +194,35 @@ export function BetVoucher({ bet, sels, statusBadge, copy, shareCode }: {
               <span className="text-[10px] sm:text-[11px] tracking-[0.32em] text-muted-foreground font-bold">LOMITA SHOOTERS LEAGUE</span>
             </div>
               <h2 className="font-display text-3xl sm:text-5xl font-black tracking-[0.08em] leading-none">
-              <Sparkles className="inline h-4 w-4 text-primary mr-2 -mt-2" />
-                <span className="gold-foil">BET</span> <span className="gold-foil">VOUCHER</span>
-              <Sparkles className="inline h-4 w-4 text-primary ml-2 -mt-2" />
+              <Sparkles className="inline h-4 w-4 text-emerald-300 mr-2 -mt-2" />
+                <span className="gold-foil">BET</span> <span className="green-foil">VOUCHER</span>
+              <Sparkles className="inline h-4 w-4 text-emerald-300 ml-2 -mt-2" />
             </h2>
-            <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.22em] text-[10px]">
+            <Badge variant="outline" className="border-emerald-400/40 bg-emerald-500/10 text-emerald-300 uppercase tracking-[0.22em] text-[10px]">
               {isVirtualTicket ? "Virtual Matches Voucher" : isFutureTicket ? "Tournament Futures Voucher" : "Real Matches Voucher"}
             </Badge>
           </div>
 
-          {/* CODES + REBET (reference layout: Booking Code left, share icons, info, Rebet button right) */}
+          {/* CODES */}
           <div className="rounded-2xl voucher-row p-4 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Booking Code</div>
-              <div className="mt-1 flex items-center gap-2">
-                <button onClick={() => copy(bet.booking_code)} className="inline-flex items-center gap-2 font-mono font-black text-xl sm:text-2xl gold-foil hover:opacity-80 truncate max-w-full">
-                  {bet.booking_code} <Copy className="h-4 w-4 text-primary shrink-0" />
-                </button>
-                <button onClick={shareCode} className="h-7 w-7 grid place-items-center rounded-full border border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/10" title="Share booking">
-                  <Share2 className="h-3.5 w-3.5" />
-                </button>
-                <span className="h-7 w-7 grid place-items-center rounded-full border border-muted/40 text-muted-foreground" title="Locked odds captured at booking time">
-                  <Info className="h-3.5 w-3.5" />
-                </span>
-              </div>
-              <div className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">Tracking · <button onClick={() => copy(bet.tracking_id)} className="font-mono text-primary hover:underline">{bet.tracking_id}</button></div>
+              <button onClick={() => copy(bet.booking_code)} className="mt-1 inline-flex items-center gap-2 font-mono font-black text-xl sm:text-2xl gold-foil hover:opacity-80 truncate max-w-full">
+                {bet.booking_code} <Copy className="h-4 w-4 text-primary shrink-0" />
+              </button>
+              <button onClick={shareCode} className="mt-1 flex items-center gap-1 text-xs neon-green hover:underline">
+                <Share2 className="h-3 w-3" />Share booking
+              </button>
+            </div>
+            <div className="text-right min-w-0">
+              <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Tracking ID</div>
+              <button onClick={() => copy(bet.tracking_id)} className="mt-1 inline-flex items-center gap-1 ml-auto font-mono font-black text-base sm:text-lg gold-foil hover:opacity-80 max-w-full truncate">
+                {bet.tracking_id} <Copy className="h-3 w-3 text-primary shrink-0" />
+              </button>
               {bet.profiles?.full_name && (
-                <div className="text-[10px] uppercase tracking-widest text-muted-foreground mt-0.5">By {bet.profiles.full_name}</div>
+                <div className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">By {bet.profiles.full_name}</div>
               )}
             </div>
-            <Button
-              onClick={rebet}
-              className="shrink-0 h-11 px-5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-black tracking-wider text-sm shadow-[0_8px_24px_-8px_rgba(52,211,153,0.7)]"
-            >
-              <RotateCw className="h-4 w-4 mr-1.5" /> Rebet
-            </Button>
           </div>
 
           {/* SELECTIONS HEADER */}
@@ -241,66 +236,86 @@ export function BetVoucher({ bet, sels, statusBadge, copy, shareCode }: {
             <span className="flex-1 h-px bg-gradient-to-l from-transparent to-emerald-400/50" />
           </div>
 
-          {/* SELECTIONS LIST — compact reference layout */}
-          <div className="space-y-4">
-            {sels.map((s: any) => {
+          {/* SELECTIONS LIST */}
+          <div className="space-y-3">
+            {sels.map((s: any, i: number) => {
               const m = s.matches;
               const isFuture = m?.match_kind === "future";
               const live = m?.status === "live";
               const ended = m?.status === "ended";
-              const won = s.result === "won";
-              const lost = s.result === "lost";
-              const badgeCls = won ? "text-emerald-300" : lost ? "text-destructive" : live ? "text-emerald-300 animate-pulse" : "text-muted-foreground";
+              const r = selResult(s);
+              const won = r === "won";
+              const lost = r === "lost";
+              const badgeCls = won ? "badge-won" : lost ? "badge-lost" : "badge-pending";
               const badgeLabel = won ? "WON" : lost ? "LOST" : live ? "LIVE" : "PENDING";
-              const dateStr = m?.start_time ? new Date(m.start_time).toLocaleString(undefined, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
-              const gameId = (s.match_id ?? s.id ?? "").toString().slice(0, 8).toUpperCase();
+              const BadgeIcon = won ? Trophy : lost ? X : ClockIcon;
+              const scoreLabel = isFuture ? "PROGRESS" : ended ? "FINAL" : live ? "LIVE" : "SCORE";
               const futureStatus = s.odds?.future_status ?? "active";
-              const matchLabel = isFuture
-                ? m?.name
-                : (m?.home_team?.name && m?.away_team?.name)
-                  ? `${m.home_team.name} v ${m.away_team.name}`
-                  : (m?.name ?? "Match");
+              // Derive a short, stable numeric Game ID from the match uuid (cosmetic, like a bookmaker slip).
+              const gid = m?.id ? (parseInt(m.id.replace(/[^0-9a-f]/gi, "").slice(0, 6) || "0", 16) % 90000) + 10000 : null;
+              const dt = m?.start_time
+                ? new Date(m.start_time).toLocaleString(undefined, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+                : null;
               return (
-                <div key={s.id} className="relative flex gap-3">
-                  {/* Clock rail */}
-                  <div className="pt-2 shrink-0">
-                    <div className="h-7 w-7 grid place-items-center rounded-full border border-muted/40 text-muted-foreground">
-                      <ClockIcon className="h-3.5 w-3.5" />
+                <div key={s.id} className="voucher-row p-3 sm:p-4 transition-all hover:scale-[1.01] space-y-2.5">
+                  {/* META: game id · date + status badge */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground truncate min-w-0">
+                      {isFuture ? "Tournament Future" : gid ? `Game ID: ${gid}` : "Match"}
+                      {dt && <span className="whitespace-nowrap"> <span className="text-emerald-400/50">|</span> {dt}</span>}
+                    </div>
+                    <div className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black tracking-widest ${badgeCls}`}>
+                      {badgeLabel} <BadgeIcon className="h-3 w-3" />
                     </div>
                   </div>
-                  {/* Body */}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                      Game ID: <span className="text-foreground/80">{gameId}</span>{dateStr && <> | {dateStr}</>}
+
+                  {/* TEAMS with logos */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex -space-x-2 shrink-0">
+                      <TeamLogo name={isFuture ? s.selection_label : m?.home_team?.name} url={isFuture ? s.odds?.future_emblem_url : m?.home_team?.logo_url} size={30} rounded="full" />
+                      {!isFuture && <TeamLogo name={m?.away_team?.name} url={m?.away_team?.logo_url} size={30} rounded="full" />}
                     </div>
-                    <div className="mt-0.5 text-sm sm:text-base font-black text-foreground truncate">{matchLabel}</div>
-                    <button className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-300 hover:underline">
-                      <LineChart className="h-3.5 w-3.5" /> Match Tracker
-                    </button>
-                    <div className="mt-2 rounded-xl bg-black/40 border border-white/5 px-4 py-3 grid grid-cols-[64px_1fr_auto] items-center gap-x-3 gap-y-1 text-sm">
-                      <div className="text-muted-foreground text-right">Pick</div>
-                      <div className="font-black text-foreground truncate">
-                        {s.selection_label}
-                        <span className="text-muted-foreground font-normal">@</span>
-                        <span className="gold-foil">{Number(s.locked_odds).toFixed(2)}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm sm:text-base font-extrabold tracking-wide uppercase leading-tight">
+                        {isFuture ? m?.name : <>{m?.home_team?.name} <span className="text-muted-foreground font-normal lowercase mx-0.5">v</span> {m?.away_team?.name}</>}
                       </div>
-                      <div className={`text-[10px] font-black tracking-widest ${badgeCls}`}>{badgeLabel}</div>
-                      <div className="text-muted-foreground text-right">Market</div>
-                      <div className="text-foreground/90 truncate col-span-2">{s.markets?.name ?? (isFuture ? "Futures" : "Market")}</div>
                     </div>
-                    <div className="mt-1 flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
-                      <span>{isFuture ? "PROGRESS" : ended ? "FINAL" : live ? "LIVE" : "SCORE"}</span>
-                      <span className={`font-mono font-black ${live ? "text-emerald-300" : "text-foreground"}`}>
+                  </div>
+
+                  {/* MATCH TRACKER link + score */}
+                  <div className="flex items-center justify-between gap-2">
+                    {m && !isFuture ? (
+                      <Link to="/matches/$matchId" params={{ matchId: m.id }} className="inline-flex items-center gap-1.5 text-xs font-bold neon-green hover:underline">
+                        <TrendingUp className="h-3.5 w-3.5" />Match Tracker
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-muted-foreground font-semibold">Futures market</span>
+                    )}
+                    <div className="text-right shrink-0">
+                      <span className="text-[9px] uppercase tracking-widest text-muted-foreground mr-1.5">{scoreLabel}</span>
+                      <span className={`font-mono font-black text-sm ${live ? "neon-green animate-pulse" : "text-foreground"}`}>
                         {isFuture ? futureStatus.toUpperCase() : m ? `${m.home_score}-${m.away_score}` : "—"}
                       </span>
                     </div>
-                    {isFuture && <FutureTicketProgress odd={s.odds} />}
                   </div>
+
+                  {/* PICK / MARKET box */}
+                  <div className="rounded-xl border border-emerald-500/15 bg-background/40 px-3 py-2.5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 items-center">
+                    <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Pick</span>
+                    <span className="text-sm font-bold text-foreground truncate">
+                      {s.selection_label}<span className="gold-foil font-mono font-black">@{Number(s.locked_odds).toFixed(2)}</span>
+                    </span>
+                    <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Market</span>
+                    <span className="text-xs font-semibold text-foreground/90 truncate">
+                      {isFuture ? (s.odds?.future_candidate_type ?? "Contender") : (s.markets?.name ?? "—")}
+                    </span>
+                  </div>
+
+                  {isFuture && <FutureTicketProgress odd={s.odds} />}
                 </div>
               );
             })}
           </div>
-
 
           {/* PERFORATION */}
           <div className="relative py-3">
