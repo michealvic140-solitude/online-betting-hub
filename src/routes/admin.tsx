@@ -56,6 +56,9 @@ import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
 import { HomeBannersAdminPanel } from "@/components/admin/HomeBannersAdminPanel";
 import { ArcadeAdminPanel } from "@/components/admin/ArcadeAdminPanel";
 import { CasinoHistoryPanel } from "@/components/admin/CasinoHistoryPanel";
+import { FaqAdminPanel } from "@/components/admin/FaqAdminPanel";
+import { PollsAdminPanel } from "@/components/admin/PollsAdminPanel";
+import { ShopAdminPanel } from "@/components/admin/ShopAdminPanel";
 import { TopBetsPanel } from "@/components/admin/TopBetsPanel";
 import { TournamentAdminPanel } from "@/components/admin/TournamentAdminPanel";
 import { seedLegacyUsers } from "@/lib/seed-users.functions";
@@ -228,6 +231,9 @@ export function AdminPage() {
             <TabsContent value="banners" className="mt-4"><HomeBannersAdminPanel /></TabsContent>
             <TabsContent value="arcade" className="mt-4"><ArcadeAdminPanel /></TabsContent>
             <TabsContent value="casinohistory" className="mt-4"><CasinoHistoryPanel /></TabsContent>
+            <TabsContent value="faq" className="mt-4"><FaqAdminPanel /></TabsContent>
+            <TabsContent value="polls" className="mt-4"><PollsAdminPanel /></TabsContent>
+            <TabsContent value="shop" className="mt-4"><ShopAdminPanel /></TabsContent>
             <TabsContent value="activity" className="mt-4"><ActivityPanel /></TabsContent>
             <TabsContent value="streakpush" className="mt-4"><StreakAndPushPanel /></TabsContent>
             <TabsContent value="referrals" className="mt-4"><ReferralsAdminPanel /></TabsContent>
@@ -3346,6 +3352,9 @@ const QUICK_ACTIONS: { i: any; l: string; t: string }[] = [
   { i: Gift, l: "Gifts & Spin", t: "giftsspin" },
   { i: Dice5, l: "Lottery", t: "lottery" },
   { i: ClipboardList, l: "Surveys", t: "surveys" },
+  { i: MessageSquare, l: "FAQ", t: "faq" },
+  { i: ThumbsUp, l: "Polls", t: "polls" },
+  { i: Gift, l: "Shop", t: "shop" },
   { i: ListOrdered, l: "Leaderboard", t: "leaderboard" },
   { i: Trophy, l: "Matches", t: "matches" },
   { i: Send, l: "Notify", t: "notify" },
