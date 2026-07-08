@@ -17,6 +17,7 @@ import {
   Shield, Users, Trophy, Coins, Megaphone, Settings as SettingsIcon, Ticket, AlertTriangle,
   Calendar, Tag, Image as ImageIcon, BarChart3, History, Send, Plus, Trash2, Pencil, ChevronRight, ChevronLeft, Wallet, ListOrdered, Sparkles, ClipboardList, Lock, Pause, Play, Check, X, MessageSquare, Eye, RotateCw, Copy, Globe, MapPin, Smartphone, Clock, Filter,
   Dice5, LogOut, Crosshair, Target, Flame, ThumbsUp, ThumbsDown,
+  Gift, BellRing, GalleryHorizontalEnd, Gamepad2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import lslLogo from "@/assets/lsl-logo.png";
@@ -42,25 +43,52 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 } from "recharts";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { ActionConfirmDialog } from "@/components/ActionConfirmDialog";
+import { notifyAction, humanizeAction } from "@/lib/notify-action";
 import { SpotlightsAdminPanel } from "@/components/Spotlight";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { ImageSettingControl } from "@/components/admin/ImageSettingControl";
 import { ClansAdminPanel } from "@/components/admin/ClansAdminPanel";
+import { LotteryAdminPanel } from "@/components/admin/LotteryAdminPanel";
+import { GiftsSpinAdminPanel } from "@/components/admin/GiftsSpinAdminPanel";
+import { SurveysAdminPanel } from "@/components/admin/SurveysAdminPanel";
+import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
+import { HomeBannersAdminPanel } from "@/components/admin/HomeBannersAdminPanel";
+import { ArcadeAdminPanel } from "@/components/admin/ArcadeAdminPanel";
+import { CasinoHistoryPanel } from "@/components/admin/CasinoHistoryPanel";
 import { TopBetsPanel } from "@/components/admin/TopBetsPanel";
 import { TournamentAdminPanel } from "@/components/admin/TournamentAdminPanel";
-import { HomepagePanel } from "@/components/admin/HomepagePanel";
 import { seedLegacyUsers } from "@/lib/seed-users.functions";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { loadStandings, type LbRow } from "@/lib/leaderboard";
+
+// High-frequency admin actions that should not trigger a pop-out dialog.
+const SILENT_AUDIT_ACTIONS = new Set(["match_live_score", "match_presence"]);
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — LSL" }, { name: "description", content: "League administration dashboard." }] }),
   component: AdminPage,
 });
 
-function AdminPage() {
+export function AdminPage() {
   const { isAdmin, isMod, loading } = useAuth();
   const nav = useNavigate();
   const [alerts, setAlerts] = useState<Record<string, number>>({});
+  // Admin-configurable console header image (falls back to bundled seed art).
+  const [heroBg, setHeroBg] = useState<string | null>(null);
+  const [heroFit, setHeroFit] = useState<string>("cover");
+  const [heroPos, setHeroPos] = useState<string>("center right");
+  useEffect(() => {
+    supabase.from("app_settings").select("admin_hero_url,admin_hero_fit,admin_hero_position").eq("id", 1).maybeSingle()
+      .then(({ data }) => {
+        setHeroBg((data as any)?.admin_hero_url ?? null);
+        setHeroFit((data as any)?.admin_hero_fit ?? "cover");
+        setHeroPos((data as any)?.admin_hero_position ?? "center right");
+      });
+  }, []);
+  // Toggle the frosted-glass blur on the whole console so admins can verify
+  // sensitive data alignment/layout against a clean, unblurred surface.
+  const [unblurred, setUnblurred] = useState(false);
   // Default to analytics for admins; re-sync once auth resolves so a reload
   // never lands on the Tickets tab when an admin refreshes the page.
   const [activeTab, setActiveTab] = useState<string>("analytics");
@@ -112,32 +140,35 @@ function AdminPage() {
 
   return (
     <Layout>
-      <main className="w-full min-h-[calc(100vh-3.5rem)] overflow-x-hidden">
+      <main className={`admin-console-page${unblurred ? " admin-unblurred" : ""} w-full min-h-[calc(100vh-3.5rem)] overflow-x-hidden`}>
         <div className="mx-auto w-full max-w-[1280px] px-3 sm:px-4 py-4 sm:py-6 space-y-4">
 
           <div
-            className="relative overflow-hidden rounded-2xl p-4 border border-primary/40 shadow-luxury bg-card"
-            style={{ backgroundImage: `linear-gradient(90deg, rgba(8,14,10,0.94) 0%, rgba(8,14,10,0.72) 42%, rgba(8,14,10,0.18) 100%), url(${adminConsoleSeed})`, backgroundSize: "cover", backgroundPosition: "center right" }}
+            className="admin-hero-frame relative overflow-hidden rounded-2xl p-5 sm:p-7"
+            style={{ backgroundImage: `linear-gradient(90deg, rgba(3,12,10,0.76) 0%, rgba(3,12,10,0.44) 42%, rgba(3,12,10,0.18) 100%), url(${heroBg || adminConsoleSeed})`, backgroundSize: `auto, ${heroFit === "contain" ? "contain" : heroFit === "fill" ? "100% 100%" : "cover"}`, backgroundPosition: `center, ${heroPos || "center right"}`, backgroundRepeat: "no-repeat" }}
           >
             <div className="absolute inset-x-0 top-0 h-1 bg-gradient-gold" />
             <div className="relative flex items-center gap-3 flex-wrap">
               <button
                 type="button"
                 onClick={() => setActiveTab("analytics")}
-                className="h-12 w-12 rounded-2xl bg-gradient-gold text-primary-foreground grid place-items-center shadow-gold overflow-hidden ring-2 ring-primary/40 shrink-0 hover:ring-primary/70 transition"
+                className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-gradient-gold text-primary-foreground grid place-items-center shadow-gold overflow-hidden ring-2 ring-primary/40 shrink-0 hover:ring-primary/70 transition"
                 title="Open analytics"
               >
-                <img src={lslLogo} alt="LSL" className="h-10 w-10 object-contain" />
+                <img src={lslLogo} alt="LSL" className="h-14 w-14 sm:h-16 sm:w-16 object-contain" />
               </button>
               <div>
-                <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Command center</p>
-                <h1 className="text-2xl sm:text-3xl font-bold gradient-gold-text">{isAdmin ? "Super Admin Console" : "Admin Panel"}</h1>
+                <p className="text-[11px] sm:text-xs uppercase tracking-[0.3em] text-muted-foreground">Command center</p>
+                <h1 className="text-3xl sm:text-4xl font-bold gradient-gold-text">{isAdmin ? "Super Admin Console" : "Admin Panel"}</h1>
               </div>
               <Badge variant="outline" className={`ml-auto ${isAdmin ? "border-accent/50 text-accent" : "border-primary/50 text-primary"}`}>
                 {isAdmin ? "Super Admin" : "Admin"}
               </Badge>
               {isAdmin && (
                 <div className="flex items-center gap-1 w-full sm:w-auto sm:ml-2">
+                  <Button size="sm" variant="outline" className="text-[11px]" onClick={() => setUnblurred((v) => !v)} title="Toggle frosted-glass blur to verify alignment & layout">
+                    {unblurred ? "🔍 Unblurred" : "✨ Blurred"}
+                  </Button>
                   <Button size="sm" variant="outline" className="text-[11px]" onClick={() => { if (typeof window !== "undefined") window.location.reload(); }} title="Reload this admin page">⟳ Reload</Button>
                   <Button size="sm" variant="outline" className="text-[11px]" onClick={async () => {
                     try {
@@ -170,10 +201,13 @@ function AdminPage() {
             <TabsContent value="withdrawals" className="mt-4"><WithdrawalsPanel /></TabsContent>
             <TabsContent value="housewallet" className="mt-4"><HouseWalletPanel /></TabsContent>
             <TabsContent value="leaderboard" className="mt-4"><LeaderboardAdminPanel /></TabsContent>
+            <TabsContent value="lottery" className="mt-4"><LotteryAdminPanel /></TabsContent>
+            <TabsContent value="giftsspin" className="mt-4"><GiftsSpinAdminPanel /></TabsContent>
             <TabsContent value="promos" className="mt-4"><PromoPanel /></TabsContent>
             <TabsContent value="content" className="mt-4"><ContentPanel /></TabsContent>
             <TabsContent value="tickets" className="mt-4"><TicketsPanel /></TabsContent>
             <TabsContent value="tasks" className="mt-4"><TasksAchievementsPanel /></TabsContent>
+            <TabsContent value="surveys" className="mt-4"><SurveysAdminPanel /></TabsContent>
             <TabsContent value="challenges" className="mt-4"><ChallengesAdminPanel /></TabsContent>
             <TabsContent value="seasons" className="mt-4"><SeasonsAdminPanel /></TabsContent>
             <TabsContent value="bettracker" className="mt-4"><BetTrackerPanel /></TabsContent>
@@ -190,6 +224,10 @@ function AdminPage() {
             <TabsContent value="reports" className="mt-4"><ReportsPanel /></TabsContent>
             <TabsContent value="tokenrules" className="mt-4"><TokenRulesPanel /></TabsContent>
             <TabsContent value="broadcast" className="mt-4"><BroadcastPanel /></TabsContent>
+            <TabsContent value="pushblast" className="mt-4"><PushBroadcastPanel /></TabsContent>
+            <TabsContent value="banners" className="mt-4"><HomeBannersAdminPanel /></TabsContent>
+            <TabsContent value="arcade" className="mt-4"><ArcadeAdminPanel /></TabsContent>
+            <TabsContent value="casinohistory" className="mt-4"><CasinoHistoryPanel /></TabsContent>
             <TabsContent value="activity" className="mt-4"><ActivityPanel /></TabsContent>
             <TabsContent value="streakpush" className="mt-4"><StreakAndPushPanel /></TabsContent>
             <TabsContent value="referrals" className="mt-4"><ReferralsAdminPanel /></TabsContent>
@@ -200,9 +238,9 @@ function AdminPage() {
             <TabsContent value="topbets" className="mt-4"><TopBetsPanel /></TabsContent>
             <TabsContent value="tournaments" className="mt-4"><TournamentAdminPanel /></TabsContent>
             <TabsContent value="attendance" className="mt-4"><AttendancePanel /></TabsContent>
-            <TabsContent value="homepage" className="mt-4"><HomepagePanel /></TabsContent>
           </Tabs>
         </div>
+        <ActionConfirmDialog />
       </main>
     </Layout>
   );
@@ -228,6 +266,7 @@ async function logAudit(action: string, target_type: string, target_id?: string,
     _metadata: enriched,
   });
   if (error) console.warn("audit log failed", error.message);
+  else if (!SILENT_AUDIT_ACTIONS.has(action)) notifyAction("Action saved", humanizeAction(action));
 }
 
 function AdminTab({ icon: Icon, label, count = 0 }: { icon: any; label: string; count?: number }) {
@@ -538,6 +577,16 @@ function UsersPanel() {
                     {!u.is_banned && !u.is_muted && !u.is_restricted && <span className="badge-won text-[9px] px-1.5 py-0.5 rounded-full font-bold">ACTIVE</span>}
                   </div>
                   <div className="text-[11px] text-muted-foreground truncate">{u.email}</div>
+                  {u.special_id && (
+                    <button
+                      type="button"
+                      onClick={() => { navigator.clipboard?.writeText(u.special_id); toast.success(`Copied ID ${u.special_id}`); }}
+                      className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md border border-primary/40 text-primary bg-primary/10 hover:bg-primary/20 transition"
+                      title="Click to copy unique ID"
+                    >
+                      🆔 {u.special_id}
+                    </button>
+                  )}
                   {u.phone && <div className="text-[10px] text-muted-foreground truncate">📞 {u.phone}</div>}
                   {(u.discord_username || u.discord_full_name) && (
                     <div className="text-[10px] text-[#5865F2] truncate" title="Discord">
@@ -866,12 +915,36 @@ function UserEditDialog({ user, roles, onClose }: { user: any; roles: string[]; 
               </div>
             </TabsContent>
 
-            <TabsContent value="history" className="space-y-6 mt-5">
+            <TabsContent value="history" className="mt-5">
+              <Tabs defaultValue="bets" className="w-full">
+                <TabsList className="flex w-full flex-wrap justify-start gap-1 bg-muted/30 rounded-xl p-1 h-auto mb-1">
+                  <TabsTrigger value="bets" className="rounded-lg text-[11px] px-2.5 py-1.5 data-[state=active]:bg-gradient-gold data-[state=active]:text-background">Bet History ({bets.length})</TabsTrigger>
+                  <TabsTrigger value="tx" className="rounded-lg text-[11px] px-2.5 py-1.5 data-[state=active]:bg-gradient-gold data-[state=active]:text-background">Token Tx ({tx.length})</TabsTrigger>
+                  <TabsTrigger value="withdrawals" className="rounded-lg text-[11px] px-2.5 py-1.5 data-[state=active]:bg-gradient-gold data-[state=active]:text-background">Withdrawals ({withdrawals.length})</TabsTrigger>
+                  <TabsTrigger value="promos" className="rounded-lg text-[11px] px-2.5 py-1.5 data-[state=active]:bg-gradient-gold data-[state=active]:text-background">Promos ({redemptions.length})</TabsTrigger>
+                  <TabsTrigger value="audit" className="rounded-lg text-[11px] px-2.5 py-1.5 data-[state=active]:bg-gradient-gold data-[state=active]:text-background">Admin Actions ({audits.length})</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="bets" className="mt-4 space-y-6">
               {/* BETS */}
               <section>
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Bet history ({bets.length})</div>
-                  <div className="text-[10px] text-muted-foreground">Stake → Potential</div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[10px]"
+                      onClick={async () => {
+                        const { data, error } = await supabase.rpc("resettle_won_bets");
+                        if (error) { toast.error(error.message); return; }
+                        toast.success(Number(data) > 0 ? `Corrected ${data} stuck ticket(s) to WON` : "No stuck tickets found");
+                      }}
+                    >
+                      Fix stuck won tickets
+                    </Button>
+                    <div className="text-[10px] text-muted-foreground">Stake → Potential</div>
+                  </div>
                 </div>
                 {bets.length === 0 && <div className="text-xs text-muted-foreground">No bets placed.</div>}
                 <div className="space-y-2">
@@ -914,7 +987,9 @@ function UserEditDialog({ user, roles, onClose }: { user: any; roles: string[]; 
                   })}
                 </div>
               </section>
+                </TabsContent>
 
+                <TabsContent value="tx" className="mt-4 space-y-6">
               {/* TOKEN TRANSACTIONS */}
               <section>
                 <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">Token transactions ({tx.length})</div>
@@ -1020,7 +1095,9 @@ function UserEditDialog({ user, roles, onClose }: { user: any; roles: string[]; 
                   })}
                 </div>
               </section>
+                </TabsContent>
 
+                <TabsContent value="withdrawals" className="mt-4 space-y-6">
               {/* WITHDRAWALS */}
               <section>
                 <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">Withdrawal requests ({withdrawals.length})</div>
@@ -1042,7 +1119,9 @@ function UserEditDialog({ user, roles, onClose }: { user: any; roles: string[]; 
                   ))}
                 </div>
               </section>
+                </TabsContent>
 
+                <TabsContent value="promos" className="mt-4 space-y-6">
               {/* PROMO REDEMPTIONS */}
               <section>
                 <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">Promo redemptions ({redemptions.length})</div>
@@ -1057,7 +1136,9 @@ function UserEditDialog({ user, roles, onClose }: { user: any; roles: string[]; 
                   ))}
                 </div>
               </section>
+                </TabsContent>
 
+                <TabsContent value="audit" className="mt-4 space-y-6">
               {/* ADMIN AUDIT TIMELINE */}
               <section>
                 <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">Admin actions on this user ({audits.length})</div>
@@ -1089,6 +1170,8 @@ function UserEditDialog({ user, roles, onClose }: { user: any; roles: string[]; 
                   })}
                 </div>
               </section>
+                </TabsContent>
+              </Tabs>
             </TabsContent>
           </Tabs>
         </div>
@@ -1175,6 +1258,9 @@ function MatchesPanel() {
     await supabase.from("matches").update({ home_score: hs, away_score: as, status: "ended", winner_team_id: winnerId }).eq("id", m.id);
     await supabase.from("markets").update({ is_open: false }).eq("match_id", m.id);
     await settleBetsForMatch(m.id, winnerId, hs, as);
+    // Self-heal: an accumulator whose last-resolving leg completes here may have
+    // been wrongly stranded at "lost" earlier — credit any all-won ticket now.
+    await supabase.rpc("resettle_won_bets");
     await logAudit("match_settled", "match", m.id, { home_score: hs, away_score: as, winner_team_id: winnerId });
     window.dispatchEvent(new CustomEvent("admin:futures-refresh", { detail: { matchId: m.id } }));
     toast.success("Match settled — bets paid out"); load();
@@ -1452,7 +1538,7 @@ function FuturesAdminPanel() {
     setTeams(tm ?? []);
     setPlayers(pl ?? []);
     const { data: lm } = await supabase.from("matches")
-      .select("id,name,home_score,away_score,status,home_team:teams!home_team_id(name),away_team:teams!away_team_id(name),home_player:players!home_player_id(name),away_player:players!away_player_id(name)")
+      .select("id,name,home_team_id,away_team_id,winner_team_id,home_score,away_score,status,home_team:teams!home_team_id(name),away_team:teams!away_team_id(name),home_player:players!home_player_id(name),away_player:players!away_player_id(name)")
       .eq("is_archived", false).eq("is_virtual", false).neq("match_kind", "future")
       .order("start_time", { ascending: false }).limit(300);
     setLinkableMatches(lm ?? []);
@@ -1523,13 +1609,19 @@ function FuturesAdminPanel() {
       return;
     }
     const lm = linkableMatches.find((m) => m.id === matchId);
-    const cs = lm ? (side === "away" ? lm.away_score : lm.home_score) : null;
-    const os = lm ? (side === "away" ? lm.home_score : lm.away_score) : null;
-    const opp = lm ? getLinkedOpponentName(lm, side) : null;
+    const matchedSide = lm ? getMatchSideForContender(lm, odd.label) : null;
+    if (lm && !matchedSide) {
+      toast.error(`${odd.label} is not in that match. Pick the normal match where this contender actually played.`);
+      return;
+    }
+    const linkedSide = matchedSide ?? side;
+    const cs = lm ? (linkedSide === "away" ? lm.away_score : lm.home_score) : null;
+    const os = lm ? (linkedSide === "away" ? lm.home_score : lm.away_score) : null;
+    const opp = lm ? getLinkedOpponentName(lm, linkedSide) : null;
     const ended = lm && ["ended", "completed", "settled"].includes(lm.status);
     await supabase.from("odds").update({
       future_match_id: matchId,
-      future_match_side: side,
+      future_match_side: linkedSide,
       future_live_score: lm ? `${cs ?? 0}-${os ?? 0}` : null,
       future_live_opponent: opp ?? null,
       future_live_outcome: ended ? ((cs ?? 0) >= (os ?? 0) ? "won" : "lost") : "pending",
@@ -1589,6 +1681,7 @@ function FuturesAdminPanel() {
     await supabase.from("markets").update({ is_open: false }).eq("match_id", match.id);
     await supabase.from("matches").update({ status: "ended", settled_at: new Date().toISOString() } as any).eq("id", match.id);
     await settleFutureBets(match.id, winners.map((o: any) => o.id), winners.map((o: any) => o.label).join(", "));
+    await supabase.rpc("resettle_won_bets");
     await logAudit("future_market_settled", "match", match.id, { winners: winners.map((o: any) => o.label) });
     toast.success("Future settled and tickets updated");
     load();
@@ -1639,6 +1732,15 @@ function getMatchSideName(match: any, side: "home" | "away") {
 
 function getLinkedOpponentName(match: any, side: "home" | "away") {
   return getMatchSideName(match, side === "away" ? "home" : "away");
+}
+
+function getMatchSideForContender(match: any, label: string): "home" | "away" | null {
+  const contender = label.trim().toLowerCase();
+  const homeNames = [match?.home_player?.name, match?.home_team?.name].map((name) => name?.trim?.().toLowerCase()).filter(Boolean);
+  const awayNames = [match?.away_player?.name, match?.away_team?.name].map((name) => name?.trim?.().toLowerCase()).filter(Boolean);
+  if (homeNames.includes(contender)) return "home";
+  if (awayNames.includes(contender)) return "away";
+  return null;
 }
 
 function getLinkableMatchLabel(match: any) {
@@ -2977,7 +3079,7 @@ function AnalyticsPanel() {
 
       const { data: aud } = await supabase.from("audit_logs").select("action,target_type,created_at,metadata").order("created_at", { ascending: false }).limit(6);
       setActivity(aud ?? []);
-      const { data: hl } = await supabase.from("highlights").select("id,title,media_url,media_type,created_at").eq("is_active", true).order("created_at", { ascending: false }).limit(4);
+      const { data: hl } = await supabase.from("highlights").select("id,title,media_url,media_type,created_at,likes,dislikes").eq("is_active", true).order("created_at", { ascending: false }).limit(4);
       setHighlights(hl ?? []);
     })();
   }, []);
@@ -3105,7 +3207,7 @@ function AnalyticsPanel() {
 
       {/* ROW 7 — Recent Activity | Live Gang Wars + Event Countdown | Highlights Hub */}
       <div className="grid grid-cols-[1.15fr_0.9fr_1.35fr] gap-3">
-        <PanelBlock title="RECENT ACTIVITY" accent="sky" onView={() => setActiveTabFromAnalytics(nav, "activity")}>
+        <PanelBlock title="RECENT ACTIVITY" accent="sky" count={activity.length} hideWhenEmpty onView={() => setActiveTabFromAnalytics(nav, "activity")}>
           {activity.length === 0 && <div className="text-[10px] text-muted-foreground">No activity yet</div>}
           {activity.slice(0, 5).map((a, i) => (
             <button key={i} onClick={() => setActiveTabFromAnalytics(nav, "audit")} className="w-full text-left flex items-start gap-1.5 text-[9px] sm:text-xs py-1 border-b border-border/40 last:border-0 hover:bg-sky-500/10 rounded transition">
@@ -3118,7 +3220,7 @@ function AnalyticsPanel() {
           ))}
         </PanelBlock>
         <div className="space-y-3">
-          <PanelBlock title="LIVE GANG WARS" accent="rose" compact onView={() => nav({ to: "/matches" })}>
+          <PanelBlock title="LIVE GANG WARS" accent="rose" compact count={liveMatches.length} hideWhenEmpty onView={() => nav({ to: "/matches" })}>
             {liveMatches.length === 0 && <div className="text-[10px] text-muted-foreground">No live wars</div>}
             {liveMatches.slice(0, 2).map((m: any) => {
               const home = m.home_team; const away = m.away_team;
@@ -3132,7 +3234,7 @@ function AnalyticsPanel() {
               );
             })}
           </PanelBlock>
-          <PanelBlock title="EVENT COUNTDOWN" compact onView={() => setActiveTabFromAnalytics(nav, "events")}>
+          <PanelBlock title="EVENT COUNTDOWN" compact count={event ? 1 : 0} hideWhenEmpty onView={() => setActiveTabFromAnalytics(nav, "events")}>
             {event ? (
               <button onClick={() => setActiveTabFromAnalytics(nav, "events")} className="relative w-full min-h-24 text-left rounded-lg p-2 transition space-y-1 overflow-hidden border border-primary/20 bg-card/50">
                 {event.banner_url ? <img src={event.banner_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" /> : <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20" />}
@@ -3144,12 +3246,14 @@ function AnalyticsPanel() {
             ) : <div className="text-[10px] text-muted-foreground">No active event</div>}
           </PanelBlock>
         </div>
-        <PanelBlock title="HIGHLIGHTS HUB" accent="violet" onView={() => setActiveTabFromAnalytics(nav, "content")}>
+        <PanelBlock title="HIGHLIGHTS HUB" accent="violet" count={highlights.length} hideWhenEmpty onView={() => setActiveTabFromAnalytics(nav, "content")}>
           {highlights.length === 0 && <div className="text-[10px] text-muted-foreground">No highlights yet</div>}
           {highlights.slice(0, 4).map((h) => (
             <button key={h.id} onClick={() => setActiveTabFromAnalytics(nav, "content")} className="w-full flex items-center gap-1.5 text-[9px] sm:text-xs py-1 border-b border-border/40 last:border-0 hover:bg-violet-500/10 rounded px-1 transition">
               {h.media_type === "video" ? <Play className="h-3 w-3 text-violet-400 shrink-0" /> : <ImageIcon className="h-3 w-3 text-violet-400 shrink-0" />}
               <div className="min-w-0 flex-1 truncate text-left">{h.title}</div>
+              <span className="flex items-center gap-0.5 text-emerald-300 shrink-0"><ThumbsUp className="h-3 w-3" />{h.likes ?? 0}</span>
+              <span className="flex items-center gap-0.5 text-destructive shrink-0"><ThumbsDown className="h-3 w-3" />{h.dislikes ?? 0}</span>
             </button>
           ))}
         </PanelBlock>
@@ -3157,7 +3261,7 @@ function AnalyticsPanel() {
 
       {/* ROW 8 — Broadcast Center | Quick Actions | Top Bets */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <PanelBlock title="BROADCAST CENTER" compact onView={() => setActiveTabFromAnalytics(nav, "broadcast")}>
+        <PanelBlock title="BROADCAST CENTER" compact count={broadcasts.length} hideWhenEmpty onView={() => setActiveTabFromAnalytics(nav, "broadcast")}>
           {broadcasts.length === 0 && <div className="text-[10px] text-muted-foreground">No broadcasts</div>}
           {broadcasts.map((b) => (
             <button key={b.id} onClick={() => setActiveTabFromAnalytics(nav, "broadcast")} className="w-full text-left text-[9px] sm:text-xs py-1 border-b border-primary/10 last:border-0 hover:bg-primary/5 rounded px-1 transition">
@@ -3228,6 +3332,10 @@ const QUICK_ACTIONS: { i: any; l: string; t: string }[] = [
   { i: ClipboardList, l: "Bet Tracker", t: "bettracker" },
   { i: Eye, l: "Attendance", t: "attendance" },
   { i: Send, l: "Broadcast", t: "broadcast" },
+  { i: BellRing, l: "Push Blast", t: "pushblast" },
+  { i: GalleryHorizontalEnd, l: "Home Banners", t: "banners" },
+  { i: Gamepad2, l: "Arcade", t: "arcade" },
+  { i: History, l: "Casino History", t: "casinohistory" },
   { i: Sparkles, l: "Challenges", t: "challenges" },
   { i: MessageSquare, l: "Chat", t: "chat" },
   { i: Megaphone, l: "Content", t: "content" },
@@ -3235,6 +3343,9 @@ const QUICK_ACTIONS: { i: any; l: string; t: string }[] = [
   { i: Trophy, l: "Emblems", t: "emblems" },
   { i: Calendar, l: "Events", t: "events" },
   { i: Wallet, l: "House Wallet", t: "housewallet" },
+  { i: Gift, l: "Gifts & Spin", t: "giftsspin" },
+  { i: Dice5, l: "Lottery", t: "lottery" },
+  { i: ClipboardList, l: "Surveys", t: "surveys" },
   { i: ListOrdered, l: "Leaderboard", t: "leaderboard" },
   { i: Trophy, l: "Matches", t: "matches" },
   { i: Send, l: "Notify", t: "notify" },
@@ -3260,7 +3371,6 @@ const QUICK_ACTIONS: { i: any; l: string; t: string }[] = [
   { i: Wallet, l: "Withdrawals", t: "withdrawals" },
   { i: Trophy, l: "Won Bets", t: "wonbets" },
   { i: X, l: "Lost Bets", t: "lostbets" },
-  { i: Megaphone, l: "Homepage", t: "homepage" },
 ];
 
 const QA_PALETTE = [
@@ -3376,7 +3486,7 @@ function MetricSquare({ icon: Icon, value, title, sub, tone, compact, onClick }:
   );
 }
 
-function PanelBlock({ title, onView, children, accent, compact }: { title: string; onView?: () => void; children: React.ReactNode; accent?: "sky" | "rose" | "violet" | "amber" | "emerald"; compact?: boolean }) {
+function PanelBlock({ title, onView, children, accent, compact, count, hideWhenEmpty }: { title: string; onView?: () => void; children: React.ReactNode; accent?: "sky" | "rose" | "violet" | "amber" | "emerald"; compact?: boolean; count?: number; hideWhenEmpty?: boolean }) {
   const accents: Record<string, { ring: string; title: string; link: string; glow: string }> = {
     sky:     { ring: "border-sky-500/30",     title: "text-sky-300",     link: "text-sky-300/80 hover:text-sky-200",     glow: "shadow-[0_0_30px_-12px_rgba(56,189,248,0.5)]" },
     rose:    { ring: "border-rose-500/30",    title: "text-rose-300",    link: "text-rose-300/80 hover:text-rose-200",    glow: "shadow-[0_0_30px_-12px_rgba(244,63,94,0.5)]" },
@@ -3386,10 +3496,20 @@ function PanelBlock({ title, onView, children, accent, compact }: { title: strin
     primary: { ring: "border-primary/20",     title: "text-primary",     link: "text-primary/70 hover:text-primary",     glow: "" },
   };
   const a = accents[accent ?? "primary"];
+  // Sections that track live interactions are only shown when there is something to show.
+  if (hideWhenEmpty && (count ?? 0) <= 0) return null;
   return (
     <Card className={`bg-card/60 p-2 sm:p-3 flex flex-col ${compact ? "min-h-0 max-h-[170px]" : "min-h-[140px]"} ${a.ring} ${a.glow}`}>
       <div className="relative flex items-center justify-between mb-1.5">
-        <div className={`text-[8px] sm:text-[11px] font-bold tracking-widest ${a.title}`}>{title}</div>
+        <div className={`flex items-center gap-1.5 text-[8px] sm:text-[11px] font-bold tracking-widest ${a.title}`}>
+          {title}
+          {(count ?? 0) > 0 && (
+            <span className="relative flex items-center gap-1 rounded-full bg-destructive/90 text-destructive-foreground px-1.5 py-px text-[7px] sm:text-[8px] font-black tracking-wider">
+              <span className="absolute -left-1 -top-1 h-2 w-2 rounded-full bg-destructive animate-ping" />
+              NEW {count}
+            </span>
+          )}
+        </div>
         {onView && (
           <button onClick={onView} className={`text-[7px] sm:text-[9px] ${a.link}`}>View all</button>
         )}
@@ -3476,6 +3596,13 @@ function SettingsPanel() {
 
       <SettingsSection icon={Sparkles} title="Brand" subtitle="Tagline shown across landing surfaces.">
         <FieldLuxe label="Hero tagline"><Input value={s.hero_tagline ?? ""} onChange={(e) => setS({ ...s, hero_tagline: e.target.value })} placeholder="Season 4 · Live" /></FieldLuxe>
+        <FieldLuxe label="Home headline (big colorful text — shown in CAPITALS)">
+          <Textarea rows={2} value={s.hero_title ?? ""} onChange={(e) => setS({ ...s, hero_title: e.target.value })} placeholder="Where gangs clash and legends are gold-plated." />
+        </FieldLuxe>
+        <FieldLuxe label="Home sub-text (small paragraph below the headline)">
+          <Textarea rows={3} value={s.hero_subtitle ?? ""} onChange={(e) => setS({ ...s, hero_subtitle: e.target.value })} placeholder="The Lomita Shooters League is a virtual-token competitive shooting circuit…" />
+        </FieldLuxe>
+        <p className="text-[10px] text-muted-foreground">Leave blank to keep the default styled headline. Custom headlines are automatically shown in gold capitals.</p>
       </SettingsSection>
 
       <SettingsSection icon={MessageSquare} title="Contact" subtitle="Public-facing contact channels.">
@@ -3498,6 +3625,7 @@ function SettingsPanel() {
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="large">Large</SelectItem>
               <SelectItem value="xl">Extra Large</SelectItem>
+              <SelectItem value="full">Full screen (covers home page)</SelectItem>
             </SelectContent>
           </Select>
         </FieldLuxe>
@@ -3505,6 +3633,70 @@ function SettingsPanel() {
         {s.popup_ad_image && <img src={s.popup_ad_image} alt="" className="w-full max-h-48 object-contain rounded border border-border" />}
         <FieldLuxe label="Body text/HTML"><Textarea rows={3} value={s.popup_ad_text ?? ""} onChange={(e) => setS({ ...s, popup_ad_text: e.target.value })} /></FieldLuxe>
         <FieldLuxe label="Link (optional)"><Input value={s.popup_ad_link ?? ""} onChange={(e) => setS({ ...s, popup_ad_link: e.target.value })} /></FieldLuxe>
+      </SettingsSection>
+
+      <SettingsSection icon={Sparkles} title="Platform Identity" subtitle="Rename the platform and set the home-page logo.">
+        <FieldLuxe label="Platform name (shown in header, footer & home page)">
+          <Input value={s.site_name ?? ""} onChange={(e) => setS({ ...s, site_name: e.target.value })} placeholder="Lomita Shooters League" />
+        </FieldLuxe>
+        <ImageSettingControl
+          label="Home page logo"
+          value={s.site_logo_url}
+          onChange={(url) => setS({ ...s, site_logo_url: url })}
+          showFitControls={false}
+          aspect="16 / 9"
+          previewBg="#0b1512"
+          help="Displayed at the very top of the home page hero. Upload directly or paste an image URL. Transparent PNG looks best."
+        />
+        <p className="text-[10px] text-amber-300/80">Remember to press “Save settings” below to apply.</p>
+      </SettingsSection>
+
+      <SettingsSection icon={ImageIcon} title="Backgrounds & Appearance" subtitle="Site-wide background and admin console header image — upload or paste a URL, then crop/fit and preview live.">
+        <ImageSettingControl
+          label="Site background (all pages)"
+          value={s.site_bg_url}
+          onChange={(url) => setS({ ...s, site_bg_url: url })}
+          fit={s.site_bg_fit ?? "cover"}
+          onFitChange={(v) => setS({ ...s, site_bg_fit: v })}
+          position={s.site_bg_position ?? "center"}
+          onPositionChange={(v) => setS({ ...s, site_bg_position: v })}
+          aspect="16 / 9"
+          help="Full-screen backdrop across every page. The preview shows exactly how it will be cropped. A large landscape image (1920×1080+) works best; it is dimmed for readability automatically."
+        />
+        <ImageSettingControl
+          label="Home page hero background"
+          value={s.hero_bg_url}
+          onChange={(url) => setS({ ...s, hero_bg_url: url })}
+          fit={s.hero_bg_fit ?? "cover"}
+          onFitChange={(v) => setS({ ...s, hero_bg_fit: v })}
+          position={s.hero_bg_position ?? "center"}
+          onPositionChange={(v) => setS({ ...s, hero_bg_position: v })}
+          aspect="21 / 9"
+          help="Background image behind the hero headline at the very top of the home page. Leave empty for a clean dark hero (no image)."
+        />
+        <ImageSettingControl
+          label="Admin console header image"
+          value={s.admin_hero_url}
+          onChange={(url) => setS({ ...s, admin_hero_url: url })}
+          fit={s.admin_hero_fit ?? "cover"}
+          onFitChange={(v) => setS({ ...s, admin_hero_fit: v })}
+          position={s.admin_hero_position ?? "center right"}
+          onPositionChange={(v) => setS({ ...s, admin_hero_position: v })}
+          aspect="21 / 9"
+          help="Shown behind the “Super Admin Console” banner at the top of the admin & moderator pages. A wide image works best."
+        />
+        <ImageSettingControl
+          label="Top navigation bar background"
+          value={s.nav_bg_url}
+          onChange={(url) => setS({ ...s, nav_bg_url: url })}
+          fit={s.nav_bg_fit ?? "cover"}
+          onFitChange={(v) => setS({ ...s, nav_bg_fit: v })}
+          position={s.nav_bg_position ?? "center"}
+          onPositionChange={(v) => setS({ ...s, nav_bg_position: v })}
+          aspect="32 / 9"
+          help="Background image for the sticky top navbar across the whole platform. A very wide, short banner works best. Leave empty to use the default dark bar."
+        />
+        <p className="text-[10px] text-amber-300/80">Remember to press “Save settings” below to apply.</p>
       </SettingsSection>
 
       <Card className="glass-strong p-4 lg:col-span-2 flex flex-wrap items-center gap-2 justify-between">
@@ -3770,10 +3962,10 @@ function LeaderboardAdminPanel() {
 
   return (
     <div className="space-y-3">
-      <Card className="glass-strong p-3 space-y-2 border-amber-500/40">
+      <Card className="glass-ice p-3 space-y-2 border-amber-500/40">
         <div className="text-xs font-bold tracking-widest text-amber-300">LEADERBOARD HEADER IMAGE</div>
         <p className="text-[10px] text-muted-foreground">Shown at the top of the public Leaderboard page instead of the plain title. Upload a banner or paste an image URL.</p>
-        {headerUrl && <img src={headerUrl} alt="Leaderboard header" className="w-full max-h-28 object-contain rounded-lg border border-amber-500/30 bg-black/30" />}
+        {headerUrl && <img src={headerUrl} alt="Leaderboard header" className="w-full max-h-28 object-contain rounded-lg border border-amber-500/30 bg-black/20" />}
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex">
             <input type="file" accept="image/*" className="hidden" disabled={headerBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadHeader(f); }} />
@@ -3785,7 +3977,7 @@ function LeaderboardAdminPanel() {
         </div>
       </Card>
 
-      <Card className="glass-strong p-3 flex flex-wrap items-center gap-2 border-destructive/40">
+      <Card className="glass-ice p-3 flex flex-wrap items-center gap-2 border-destructive/40">
         <div className="text-xs font-bold tracking-widest text-destructive mr-1">DANGER ZONE</div>
         <Button variant="destructive" size="sm" onClick={clearAll}><Trash2 className="h-3 w-3 mr-1" />Wipe Leaderboard</Button>
         <Button variant="destructive" size="sm" onClick={() => wipeKind("shooter", "Shooters")}><Trash2 className="h-3 w-3 mr-1" />Wipe Shooters</Button>
@@ -3801,10 +3993,10 @@ function LeaderboardAdminPanel() {
         <span className="text-[11px] text-muted-foreground ml-auto">{rows.length} entries</span>
       </div>
 
-      <Card className="glass-strong p-0 overflow-x-auto">
+      <Card className="glass-ice p-0 overflow-x-auto">
         <table className="w-full text-xs min-w-[860px]">
           <thead>
-            <tr className="text-left uppercase tracking-widest text-muted-foreground border-b border-border bg-card/40">
+            <tr className="text-left uppercase tracking-widest text-muted-foreground border-b border-border bg-card/20">
               <th className="px-2 py-2">Pos</th>
               <th className="px-2 py-2">{tab === "gang" ? "Gang / Faction" : "Player"}</th>
               <th className="px-2 py-2">{tab === "gang" ? "Top Player" : "Gang & Faction"}</th>
@@ -4009,10 +4201,36 @@ function BetTrackerPanel() {
 }
 
 function TasksAchievementsPanel() {
+  return <TasksAchievementsPanelInner />;
+}
+
+function TasksBackgroundControl() {
+  const [bg, setBg] = useState<{ url: string | null; fit: string; pos: string }>({ url: null, fit: "cover", pos: "center" });
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    supabase.from("app_settings").select("tasks_bg_url,tasks_bg_fit,tasks_bg_position").eq("id", 1).maybeSingle()
+      .then(({ data }) => { if (data) setBg({ url: (data as any).tasks_bg_url ?? null, fit: (data as any).tasks_bg_fit ?? "cover", pos: (data as any).tasks_bg_position ?? "center" }); });
+  }, []);
+  async function save() {
+    setSaving(true);
+    const { error } = await (supabase as any).from("app_settings").update({ tasks_bg_url: bg.url, tasks_bg_fit: bg.fit, tasks_bg_position: bg.pos }).eq("id", 1);
+    setSaving(false);
+    if (error) toast.error(error.message); else toast.success("Tasks page background saved");
+  }
+  return (
+    <Card className="glass p-4 space-y-3">
+      <div className="flex items-center gap-2 font-bold"><ImageIcon className="h-4 w-4 text-primary" />Tasks Page Background</div>
+      <ImageSettingControl label="Background image" value={bg.url} onChange={(url) => setBg((p) => ({ ...p, url }))} fit={bg.fit} onFitChange={(v) => setBg((p) => ({ ...p, fit: v }))} position={bg.pos} onPositionChange={(v) => setBg((p) => ({ ...p, pos: v }))} />
+      <Button variant="outline" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save background"}</Button>
+    </Card>
+  );
+}
+
+function TasksAchievementsPanelInner() {
   const [users, setUsers] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [achievements, setAchievements] = useState<any[]>([]);
-  const [draft, setDraft] = useState({ user_id: "", title: "", description: "", reward_tokens: 0 });
+  const [draft, setDraft] = useState({ user_id: "", title: "", description: "", reward_tokens: 0, reward_kind: "tokens", target_progress: 1, period: "once", ends_at: "", banner_url: "" });
   const [ach, setAch] = useState({ user_id: "", code: "", title: "", description: "", icon: "🏆" });
   async function load() {
     const [{ data: u }, { data: t }, { data: a }] = await Promise.all([
@@ -4025,8 +4243,22 @@ function TasksAchievementsPanel() {
   useEffect(() => { load(); }, []);
   async function createTask() {
     if (!draft.user_id || !draft.title) { toast.error("Pick a user and enter a task title"); return; }
-    const { error } = await supabase.from("user_tasks").insert({ user_id: draft.user_id, title: draft.title, description: draft.description || null, reward_tokens: draft.reward_tokens || 0 });
-    if (error) toast.error(error.message); else { toast.success("Task assigned"); setDraft({ user_id: "", title: "", description: "", reward_tokens: 0 }); load(); }
+    const rows = draft.user_id === "__all__"
+      ? users.map((u) => u.id)
+      : [draft.user_id];
+    const payload = rows.map((uid) => ({
+      user_id: uid,
+      title: draft.title,
+      description: draft.description || null,
+      reward_tokens: draft.reward_tokens || 0,
+      reward_kind: draft.reward_kind || "tokens",
+      target_progress: Math.max(1, draft.target_progress || 1),
+      period: draft.period || "once",
+      ends_at: draft.ends_at ? new Date(draft.ends_at).toISOString() : null,
+      banner_url: draft.banner_url || null,
+    }));
+    const { error } = await supabase.from("user_tasks").insert(payload);
+    if (error) toast.error(error.message); else { toast.success(`Task assigned to ${rows.length} user(s)`); setDraft({ user_id: "", title: "", description: "", reward_tokens: 0, reward_kind: "tokens", target_progress: 1, period: "once", ends_at: "", banner_url: "" }); load(); }
   }
   async function markDone(task: any) {
     await supabase.from("user_tasks").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", task.id);
@@ -4055,17 +4287,52 @@ function TasksAchievementsPanel() {
   }
   return (
     <div className="space-y-4">
+      <TasksBackgroundControl />
       <Card className="glass-strong p-4 space-y-3">
         <div className="flex items-center gap-2 font-bold"><ClipboardList className="h-4 w-4 text-primary" />User Tasks</div>
         <div className="grid md:grid-cols-4 gap-2">
           <Select value={draft.user_id} onValueChange={(v) => setDraft({ ...draft, user_id: v })}>
             <SelectTrigger><SelectValue placeholder="Assign to user" /></SelectTrigger>
-            <SelectContent>{users.map((u) => <SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>)}</SelectContent>
+            <SelectContent><SelectItem value="__all__">★ All users</SelectItem>{users.map((u) => <SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>)}</SelectContent>
           </Select>
           <Input placeholder="Task title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
           <Input placeholder="Description" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
           <Input type="number" placeholder="Reward tokens" value={draft.reward_tokens || ""} onChange={(e) => setDraft({ ...draft, reward_tokens: Number(e.target.value) })} />
         </div>
+        <div className="grid md:grid-cols-4 gap-2">
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-muted-foreground">Reward kind</label>
+            <Select value={draft.reward_kind} onValueChange={(v) => setDraft({ ...draft, reward_kind: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tokens">Tokens</SelectItem>
+                <SelectItem value="cashback">Cash-back</SelectItem>
+                <SelectItem value="discount">Discount token</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-muted-foreground">Target progress</label>
+            <Input type="number" min={1} value={draft.target_progress} onChange={(e) => setDraft({ ...draft, target_progress: Number(e.target.value) })} />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-muted-foreground">Period</label>
+            <Select value={draft.period} onValueChange={(v) => setDraft({ ...draft, period: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="once">One-off</SelectItem>
+                <SelectItem value="daily">Daily</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-muted-foreground">Ends at (countdown)</label>
+            <Input type="datetime-local" value={draft.ends_at} onChange={(e) => setDraft({ ...draft, ends_at: e.target.value })} />
+          </div>
+        </div>
+        <ImageSettingControl label="Task banner image" value={draft.banner_url} onChange={(url) => setDraft({ ...draft, banner_url: url || "" })} />
         <Button className="btn-luxury" onClick={createTask}><Plus className="h-4 w-4 mr-1" />Assign task</Button>
       </Card>
       <div className="grid lg:grid-cols-2 gap-4">

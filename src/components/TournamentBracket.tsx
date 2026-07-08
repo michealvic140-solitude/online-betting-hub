@@ -104,8 +104,8 @@ export function TournamentBracket({
           <div className="flex items-center gap-4">
             <img src={lslLogo} alt="Lomita Shooters League" className="h-20 w-20 object-contain drop-shadow-[0_0_18px_rgba(212,175,55,0.4)]" />
             <div>
-              <div className="text-[26px] font-black tracking-[0.18em] gradient-gold-text leading-none">{tournament.name.toUpperCase()}</div>
-              <div className="text-[44px] font-black tracking-tight gradient-gold-text leading-[0.95]">KNOCKOUT BRACKET</div>
+              <div className="text-[24px] font-black tracking-[0.22em] text-emerald-300 leading-none drop-shadow-[0_0_10px_rgba(16,185,129,0.4)]">{tournament.name.toUpperCase()}</div>
+              <div className="text-[46px] font-black tracking-tight gradient-gold-text leading-[0.95]">KNOCKOUT BRACKET</div>
               <div className="text-[14px] font-bold tracking-[0.28em] text-amber-100/70 mt-1">{(tournament.tagline ?? "").toUpperCase()}</div>
             </div>
           </div>
@@ -217,9 +217,9 @@ export function TournamentBracket({
               boxShadow: "0 0 40px -8px rgba(212,175,55,0.5)",
             }}
           >
-            <Trophy className="h-24 w-24 text-amber-300 drop-shadow-[0_0_20px_rgba(212,175,55,0.6)]" />
-            <div className="text-[22px] font-black tracking-[0.18em] gradient-gold-text mt-2">CHAMPION</div>
-            <div className="flex gap-1 text-amber-300 mt-1">★ ★ ★</div>
+            <ChampionTrophy />
+            <div className="text-[22px] font-black tracking-[0.18em] gradient-gold-text mt-3">CHAMPION</div>
+            <div className="flex gap-1.5 text-amber-300 mt-1 text-[18px] drop-shadow-[0_0_8px_rgba(212,175,55,0.7)]">★ ★ ★</div>
             <div className="text-[16px] font-bold text-amber-100 mt-2 px-2 text-center truncate max-w-full">
               {champion ? champion.name : "— TBD —"}
             </div>
@@ -252,6 +252,47 @@ export function TournamentBracket({
 
 function Side({ name, logo, win, score, dimmed, dq }: { name?: string | null; logo?: string | null; win: boolean; score: number | null; dimmed: boolean; dq?: boolean }) {
   return SideRow({ name, logo, win, score, dimmed, dq });
+}
+
+/** Gold trophy flanked by laurel branches — matches the bracket reference art. */
+function ChampionTrophy() {
+  const leaf = (cx: number, cy: number, rot: number) => (
+    <ellipse cx={cx} cy={cy} rx="5.5" ry="3" fill="url(#laurelGold)" transform={`rotate(${rot} ${cx} ${cy})`} />
+  );
+  return (
+    <svg width="150" height="104" viewBox="0 0 150 104" fill="none" className="drop-shadow-[0_0_20px_rgba(212,175,55,0.6)]">
+      <defs>
+        <linearGradient id="trophyGold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fbe9a8" />
+          <stop offset="0.45" stopColor="#e8c45a" />
+          <stop offset="1" stopColor="#a9772a" />
+        </linearGradient>
+        <linearGradient id="laurelGold" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#f0d27a" />
+          <stop offset="1" stopColor="#9c6e28" />
+        </linearGradient>
+      </defs>
+      {/* left laurel */}
+      <g>
+        <path d="M40 96 C24 84 18 64 22 44" stroke="url(#laurelGold)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        {leaf(22, 46, 50)}{leaf(20, 58, 35)}{leaf(22, 70, 20)}{leaf(28, 82, 5)}{leaf(36, 92, -10)}
+      </g>
+      {/* right laurel (mirrored) */}
+      <g transform="translate(150 0) scale(-1 1)">
+        <path d="M40 96 C24 84 18 64 22 44" stroke="url(#laurelGold)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        {leaf(22, 46, 50)}{leaf(20, 58, 35)}{leaf(22, 70, 20)}{leaf(28, 82, 5)}{leaf(36, 92, -10)}
+      </g>
+      {/* trophy cup */}
+      <path d="M52 20 H98 V34 C98 52 88 62 75 62 C62 62 52 52 52 34 Z" fill="url(#trophyGold)" stroke="#7a5418" strokeWidth="1" />
+      {/* handles */}
+      <path d="M52 24 C40 24 40 42 52 44" stroke="url(#trophyGold)" strokeWidth="4" fill="none" />
+      <path d="M98 24 C110 24 110 42 98 44" stroke="url(#trophyGold)" strokeWidth="4" fill="none" />
+      {/* stem + base */}
+      <rect x="71" y="62" width="8" height="12" fill="url(#trophyGold)" />
+      <rect x="60" y="74" width="30" height="6" rx="2" fill="url(#trophyGold)" />
+      <rect x="64" y="80" width="22" height="8" rx="2" fill="url(#trophyGold)" />
+    </svg>
+  );
 }
 
 function SeedBadge({ n, cy }: { n: number; cy: number }) {

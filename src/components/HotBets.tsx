@@ -56,7 +56,7 @@ export function HotBets() {
     };
     load();
     const interval = setInterval(load, 60_000);
-    const ch = supabase.channel(`hot-bets-${Math.random().toString(36).slice(2)}`)
+    const ch = supabase.channel("hot-bets")
       .on("postgres_changes", { event: "*", schema: "public", table: "bets" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, load)
       .subscribe();
