@@ -245,9 +245,10 @@ function SiteFooter() {
         <div>
           <div className="font-bold mb-2">About</div>
           <p className="text-muted-foreground text-xs line-clamp-3">{s?.about_us ?? "The premier virtual shooting circuit."}</p>
-          <div className="flex gap-3 mt-2 text-xs">
+          <div className="flex flex-wrap gap-3 mt-2 text-xs">
             <button className="text-primary hover:underline" onClick={() => setOpen("about")}>Read more</button>
             <button className="text-primary hover:underline" onClick={() => setOpen("terms")}>Terms & Conditions</button>
+            <Link to="/faq" className="text-primary hover:underline">FAQ / Help Center</Link>
           </div>
         </div>
         <div>
