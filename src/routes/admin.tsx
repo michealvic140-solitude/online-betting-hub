@@ -3618,6 +3618,7 @@ function SettingsPanel() {
         <FieldLuxe label="Email"><Input value={s.contact_email ?? ""} onChange={(e) => setS({ ...s, contact_email: e.target.value })} /></FieldLuxe>
         <FieldLuxe label="Phone"><Input value={s.contact_phone ?? ""} onChange={(e) => setS({ ...s, contact_phone: e.target.value })} /></FieldLuxe>
         <FieldLuxe label="WhatsApp"><Input value={s.contact_whatsapp ?? ""} onChange={(e) => setS({ ...s, contact_whatsapp: e.target.value })} /></FieldLuxe>
+        <FieldLuxe label="Discord support server invite URL"><Input value={s.support_discord_url ?? ""} onChange={(e) => setS({ ...s, support_discord_url: e.target.value })} placeholder="https://discord.gg/your-invite" /></FieldLuxe>
       </SettingsSection>
 
       <SettingsSection icon={Megaphone} title="About & Trust" subtitle="Public-facing copy.">

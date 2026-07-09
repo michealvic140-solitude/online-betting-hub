@@ -9,6 +9,7 @@ import { LevelUpModal } from "@/components/Spotlight";
 import { GlobalWinAnimation } from "@/components/GlobalWinAnimation";
 import { BetSuccessPopout } from "@/components/BetSuccessPopout";
 import { SurveyPopout } from "@/components/SurveyPopout";
+import { PollPopout } from "@/components/PollPopout";
 import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
 import { ReactNode, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -144,6 +145,11 @@ export const Layout = ({ children }: { children: ReactNode }) => {
                   <Coins className="h-3.5 w-3.5 text-primary" />
                   <span className="text-sm font-black text-primary leading-none tabular-nums">{profile.token_balance.toLocaleString()}</span>
                 </div>
+                <Link to="/shop" title="Rewards Shop">
+                  <Button variant="ghost" size="icon" className="rounded-full hover:bg-primary/10 hover:text-primary">
+                    <ShoppingBag className="h-4 w-4" />
+                  </Button>
+                </Link>
                 <NotificationBell />
                 <Link to="/profile">
                   <Button variant="ghost" size="sm" className="gap-2 rounded-full border border-transparent hover:border-primary/30">
@@ -174,6 +180,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       <GlobalWinAnimation />
       <BetSuccessPopout />
       <SurveyPopout />
+      <PollPopout />
       <PushPermissionPrompt />
       <nav
         className="lg:hidden fixed left-0 inset-y-0 pt-16 z-40 w-16 overflow-y-auto bg-transparent border-0 shadow-none"
@@ -238,9 +245,10 @@ function SiteFooter() {
         <div>
           <div className="font-bold mb-2">About</div>
           <p className="text-muted-foreground text-xs line-clamp-3">{s?.about_us ?? "The premier virtual shooting circuit."}</p>
-          <div className="flex gap-3 mt-2 text-xs">
+          <div className="flex flex-wrap gap-3 mt-2 text-xs">
             <button className="text-primary hover:underline" onClick={() => setOpen("about")}>Read more</button>
             <button className="text-primary hover:underline" onClick={() => setOpen("terms")}>Terms & Conditions</button>
+            <Link to="/faq" className="text-primary hover:underline">FAQ / Help Center</Link>
           </div>
         </div>
         <div>
