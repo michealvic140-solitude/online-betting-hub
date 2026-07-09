@@ -29,8 +29,14 @@ function SupportPage() {
   const [message, setMessage] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [discordUrl, setDiscordUrl] = useState<string | null>(null);
 
   useEffect(() => { if (!user) nav({ to: "/login" }); }, [user, nav]);
+
+  useEffect(() => {
+    (supabase as any).from("app_settings").select("support_discord_url").eq("id", 1).maybeSingle()
+      .then(({ data }: any) => setDiscordUrl(data?.support_discord_url ?? null));
+  }, []);
 
   const load = async () => {
     if (!user) return;
