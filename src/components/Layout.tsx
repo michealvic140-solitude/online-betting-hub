@@ -145,6 +145,11 @@ export const Layout = ({ children }: { children: ReactNode }) => {
                   <Coins className="h-3.5 w-3.5 text-primary" />
                   <span className="text-sm font-black text-primary leading-none tabular-nums">{profile.token_balance.toLocaleString()}</span>
                 </div>
+                <Link to="/shop" title="Rewards Shop">
+                  <Button variant="ghost" size="icon" className="rounded-full hover:bg-primary/10 hover:text-primary">
+                    <ShoppingBag className="h-4 w-4" />
+                  </Button>
+                </Link>
                 <NotificationBell />
                 <Link to="/profile">
                   <Button variant="ghost" size="sm" className="gap-2 rounded-full border border-transparent hover:border-primary/30">
