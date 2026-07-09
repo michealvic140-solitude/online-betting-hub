@@ -180,6 +180,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       <GlobalWinAnimation />
       <BetSuccessPopout />
       <SurveyPopout />
+      <PollPopout />
       <PushPermissionPrompt />
       <nav
         className="lg:hidden fixed left-0 inset-y-0 pt-16 z-40 w-16 overflow-y-auto bg-transparent border-0 shadow-none"
