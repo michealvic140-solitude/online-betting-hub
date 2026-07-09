@@ -41,7 +41,7 @@ export function PollsAdminPanel() {
     const { data: votes, error } = await (supabase as any).from("poll_votes").select("id,user_id,selected_index,created_at").eq("poll_id", pollId).order("created_at", { ascending: false });
     if (error) return toast.error(error.message);
     setVotesByPoll((m) => ({ ...m, [pollId]: (votes ?? []) as Vote[] }));
-    const ids = Array.from(new Set((votes ?? []).map((v: any) => v.user_id))).filter((id: string) => !profiles[id]);
+    const ids = (Array.from(new Set((votes ?? []).map((v: any) => v.user_id as string))) as string[]).filter((id) => !profiles[id]);
     if (ids.length) {
       const { data: profs } = await supabase.from("profiles").select("id,full_name,email,token_balance").in("id", ids);
       const map: Record<string, ProfileLite> = {};
