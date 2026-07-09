@@ -133,6 +133,7 @@ export type Database = {
           spin_enabled: boolean
           spin_max_reward: number
           spin_min_reward: number
+          support_discord_url: string | null
           tasks_bg_fit: string | null
           tasks_bg_position: string | null
           tasks_bg_url: string | null
@@ -234,6 +235,7 @@ export type Database = {
           spin_enabled?: boolean
           spin_max_reward?: number
           spin_min_reward?: number
+          support_discord_url?: string | null
           tasks_bg_fit?: string | null
           tasks_bg_position?: string | null
           tasks_bg_url?: string | null
@@ -335,6 +337,7 @@ export type Database = {
           spin_enabled?: boolean
           spin_max_reward?: number
           spin_min_reward?: number
+          support_discord_url?: string | null
           tasks_bg_fit?: string | null
           tasks_bg_position?: string | null
           tasks_bg_url?: string | null
