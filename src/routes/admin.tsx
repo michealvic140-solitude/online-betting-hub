@@ -1675,6 +1675,12 @@ function ShooterMatchWizard({ onClose }: { onClose: () => void }) {
     const homeTeamId = home?.team_id || teams[0]?.id;
     const awayTeamId = away?.team_id || teams.find((t) => t.id !== homeTeamId)?.id || homeTeamId;
     if (!homeTeamId || !awayTeamId) { toast.error("Create at least one team in Clan first, then seed shooters freely with or without team tag."); return; }
+    const ok = await confirm({
+      title: "Post this shooter match?",
+      description: `${home?.name} vs ${away?.name}\nOdds: ${form.oddsA} / ${form.draw} / ${form.oddsB}\nStarts: ${form.start_time ? new Date(form.start_time).toLocaleString() : "immediately"}\nFeatured: ${form.featured ? "Yes" : "No"} · Marketing: ${form.marketing ? "On" : "Off"}`,
+      confirmText: "Post match",
+    });
+    if (!ok) return;
     const { data: m, error } = await supabase.from("matches").insert({
       name: form.name || `${home?.name} vs ${away?.name}`,
       home_team_id: homeTeamId,
