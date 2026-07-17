@@ -2147,6 +2147,16 @@ function MatchWizard({ onClose }: { onClose: () => void }) {
   }
 
   async function finalCreate() {
+    const homeNamePre = (details.homeIs === "A" ? teamA.name : teamB.name) || teams.find((t) => t.id === (details.homeIs === "A" ? teamA.id : teamB.id))?.name || "Home";
+    const awayNamePre = (details.homeIs === "A" ? teamB.name : teamA.name) || teams.find((t) => t.id === (details.homeIs === "A" ? teamB.id : teamA.id))?.name || "Away";
+    const homeOddsPre = details.homeIs === "A" ? details.oddsA : details.oddsB;
+    const awayOddsPre = details.homeIs === "A" ? details.oddsB : details.oddsA;
+    const ok = await confirm({
+      title: "Post this match?",
+      description: `${homeNamePre} vs ${awayNamePre}\nOdds: ${homeOddsPre} / ${details.draw} / ${awayOddsPre}\nStarts: ${details.start_time ? new Date(details.start_time).toLocaleString() : "immediately"}\nVenue: ${details.location || "—"}\nFeatured: ${details.featured ? "Yes" : "No"}\nCorrect Score market: ${csEnabled ? `${csRows.length} scorelines` : "Disabled"}`,
+      confirmText: "Post match",
+    });
+    if (!ok) return;
     const aId = await ensureTeam(teamA); if (!aId) return;
     const bId = await ensureTeam(teamB); if (!bId) return;
     const home_team_id = details.homeIs === "A" ? aId : bId;
