@@ -1443,6 +1443,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           created_by: string | null
+          hidden_in_admin: boolean
           home_player_id: string | null
           home_present: boolean
           home_score: number
@@ -1477,6 +1478,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           created_by?: string | null
+          hidden_in_admin?: boolean
           home_player_id?: string | null
           home_present?: boolean
           home_score?: number
@@ -1511,6 +1513,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           created_by?: string | null
+          hidden_in_admin?: boolean
           home_player_id?: string | null
           home_present?: boolean
           home_score?: number
