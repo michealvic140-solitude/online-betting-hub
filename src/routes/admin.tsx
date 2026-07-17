@@ -2100,6 +2100,7 @@ function FutureTinyEmblem({ label, url }: { label: string; url?: string | null }
 }
 
 function MatchWizard({ onClose }: { onClose: () => void }) {
+  const confirm = useConfirm();
   const [step, setStep] = useState(1);
   const [teams, setTeams] = useState<any[]>([]);
   const [cats, setCats] = useState<any[]>([]);
