@@ -1655,6 +1655,7 @@ async function settleFutureBets(matchId: string, winningOddIds: string[], winnin
 }
 
 function ShooterMatchWizard({ onClose }: { onClose: () => void }) {
+  const confirm = useConfirm();
   const [players, setPlayers] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [form, setForm] = useState({ home_player_id: "", away_player_id: "", oddsA: 2, draw: 3.5, oddsB: 2, name: "", start_time: "", location: "", featured: true, marketing: true, homePresent: false, awayPresent: false, restrictRepeat: false });
