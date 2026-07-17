@@ -1212,10 +1212,21 @@ function MatchesPanel() {
   const confirm = useConfirm();
   const [matches, setMatches] = useState<any[]>([]);
   const [wizard, setWizard] = useState(false);
+  const [quickTeam, setQuickTeam] = useState(false);
   const [shooterWizard, setShooterWizard] = useState(false);
+  const [tab, setTab] = useState<"live" | "scheduled" | "ended">("scheduled");
+  const [search, setSearch] = useState("");
+  const [kindFilter, setKindFilter] = useState<"all" | "team" | "shooter">("all");
+  const [editEnded, setEditEnded] = useState<any | null>(null);
 
   async function load() {
-    const { data } = await (supabase as any).from("matches").select("*, markets(id,is_open), home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url), home_player:players!home_player_id(name,avatar_url), away_player:players!away_player_id(name,avatar_url)").eq("is_archived", false).neq("match_kind", "future").order("start_time", { ascending: false });
+    const { data } = await (supabase as any)
+      .from("matches")
+      .select("*, markets(id,is_open), home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url), home_player:players!home_player_id(name,avatar_url), away_player:players!away_player_id(name,avatar_url)")
+      .eq("is_archived", false)
+      .eq("hidden_in_admin", false)
+      .neq("match_kind", "future")
+      .order("start_time", { ascending: false });
     setMatches(data ?? []);
   }
   useEffect(() => { load(); }, []);
@@ -1264,32 +1275,30 @@ function MatchesPanel() {
     await supabase.from("matches").update({ home_score: hs, away_score: as, status: "ended", winner_team_id: winnerId }).eq("id", m.id);
     await supabase.from("markets").update({ is_open: false }).eq("match_id", m.id);
     await settleBetsForMatch(m.id, winnerId, hs, as);
-    // Self-heal: an accumulator whose last-resolving leg completes here may have
-    // been wrongly stranded at "lost" earlier — credit any all-won ticket now.
     await supabase.rpc("resettle_won_bets");
     await logAudit("match_settled", "match", m.id, { home_score: hs, away_score: as, winner_team_id: winnerId });
     window.dispatchEvent(new CustomEvent("admin:futures-refresh", { detail: { matchId: m.id } }));
     toast.success("Match settled — bets paid out"); load();
   }
   async function deleteMatch(id: string) {
-    if (!await confirm({ title: "Remove this match from the panel?", description: "The match will be hidden from the matches list but kept in the database so existing bet vouchers keep showing team and stake info.", tone: "danger", confirmText: "Remove" })) return;
-    const { error } = await supabase.from("matches").update({ is_archived: true }).eq("id", id);
-    if (error) toast.error(error.message); else { logAudit("match_archived", "match", id); load(); toast.success("Match archived"); }
+    if (!await confirm({ title: "Remove this match from the panel?", description: "The match will disappear from this admin panel but stays visible in the public matches history and on user bet vouchers.", tone: "danger", confirmText: "Remove" })) return;
+    const { error } = await supabase.from("matches").update({ hidden_in_admin: true } as any).eq("id", id);
+    if (error) toast.error(error.message); else { logAudit("match_hidden_in_admin", "match", id); load(); toast.success("Match removed from panel"); }
   }
 
   async function clearEnded() {
     const endedCount = matches.filter((m) => m.status === "ended").length;
     if (endedCount === 0) { toast.info("No ended matches to clear."); return; }
     if (!await confirm({
-      title: `Clear ${endedCount} ended match${endedCount === 1 ? "" : "es"}?`,
-      description: "All matches with status 'ended' will be archived from the panel so you can create new ones. User bet vouchers and history stay intact — only the match listing here is cleared.",
-      tone: "danger", confirmText: "Clear ended matches",
+      title: `Clear ${endedCount} ended match${endedCount === 1 ? "" : "es"} from the panel?`,
+      description: "This only clears the admin panel view. Ended matches stay in the public matches history, on user bet vouchers, and in the leaderboard.",
+      tone: "danger", confirmText: "Clear from panel",
     })) return;
-    const { data: archived, error } = await supabase
-      .from("matches").update({ is_archived: true }).eq("is_archived", false).eq("status", "ended").select("id");
+    const { data: cleared, error } = await supabase
+      .from("matches").update({ hidden_in_admin: true } as any).eq("hidden_in_admin", false).eq("status", "ended").select("id");
     if (error) { toast.error(error.message); return; }
-    await logAudit("matches_bulk_archive_ended", "matches", undefined, { count: archived?.length ?? 0, match_ids: (archived ?? []).map((m: any) => m.id) });
-    toast.success(`Archived ${archived?.length ?? 0} ended match${archived?.length === 1 ? "" : "es"}`);
+    await logAudit("matches_bulk_hidden_ended", "matches", undefined, { count: cleared?.length ?? 0, match_ids: (cleared ?? []).map((m: any) => m.id) });
+    toast.success(`Cleared ${cleared?.length ?? 0} ended match${cleared?.length === 1 ? "" : "es"} from the panel`);
     load();
   }
 
@@ -1300,62 +1309,275 @@ function MatchesPanel() {
     load();
   }
 
+  const groups = {
+    live: matches.filter((m) => m.status === "live"),
+    scheduled: matches.filter((m) => m.status === "scheduled" || m.status === "cancelled"),
+    ended: matches.filter((m) => m.status === "ended"),
+  };
+
+  function filterRows(rows: any[]) {
+    const q = search.trim().toLowerCase();
+    return rows.filter((m) => {
+      if (kindFilter === "team" && m.match_kind === "shooter") return false;
+      if (kindFilter === "shooter" && m.match_kind !== "shooter") return false;
+      if (!q) return true;
+      const hay = [
+        m.name,
+        m.location,
+        m.home_team?.name, m.away_team?.name,
+        m.home_player?.name, m.away_player?.name,
+      ].filter(Boolean).join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Button className="btn-luxury" onClick={() => setWizard(true)}><Plus className="h-4 w-4 mr-1" />New Match (Wizard)</Button>
+        <Button className="btn-luxury" onClick={() => setQuickTeam(true)}><Plus className="h-4 w-4 mr-1" />Quick Team Match</Button>
+        <Button variant="outline" onClick={() => setWizard(true)}><Plus className="h-4 w-4 mr-1" />Team Match (Wizard)</Button>
         <Button className="btn-luxury" onClick={() => setShooterWizard(true)}><Crosshair className="h-4 w-4 mr-1" />New Shooter Match</Button>
-        <Button className="btn-luxury" onClick={() => window.dispatchEvent(new CustomEvent("admin:set-tab", { detail: "futures" }))}><Target className="h-4 w-4 mr-1" />New Tournament Futures</Button>
-        <Button variant="destructive" onClick={clearEnded}>
-          <Trash2 className="h-4 w-4 mr-1" />Clear Ended Matches
-        </Button>
-        <Badge variant="outline" className="ml-auto text-[10px]">Bet history is preserved — only the panel list is cleared.</Badge>
+        <Button variant="outline" onClick={() => window.dispatchEvent(new CustomEvent("admin:set-tab", { detail: "futures" }))}><Target className="h-4 w-4 mr-1" />New Tournament Futures</Button>
+        <Badge variant="outline" className="ml-auto text-[10px]">Public history & vouchers stay intact.</Badge>
       </div>
       {wizard && <MatchWizard onClose={() => { setWizard(false); load(); }} />}
+      {quickTeam && <QuickTeamMatchWizard onClose={() => { setQuickTeam(false); load(); }} />}
       {shooterWizard && <ShooterMatchWizard onClose={() => { setShooterWizard(false); load(); }} />}
+      {editEnded && <EndedMatchScoreEditor match={editEnded} onClose={() => { setEditEnded(null); load(); }} />}
 
-      <div className="space-y-2">
-        {matches.map((m: any) => (
-          <Card key={m.id} className="glass p-3 flex items-center justify-between gap-3 flex-wrap">
-            <div className="min-w-0 flex items-center gap-2">
-              {m.home_team?.logo_url && <img src={m.home_team.logo_url} alt="" className="h-8 w-8 rounded-full object-cover" />}
-              <div>
-                <div className="font-bold truncate">{m.match_kind === "shooter" ? m.home_player?.name : m.home_team?.name} vs {m.match_kind === "shooter" ? m.away_player?.name : m.away_team?.name} {m.status === "ended" && <span className="text-xs text-muted-foreground">({m.home_score}–{m.away_score})</span>}</div>
-                <div className="text-xs text-muted-foreground">{m.name} · {m.start_time ? new Date(m.start_time).toLocaleString() : ""} {m.match_kind === "shooter" && <Badge variant="outline" className="ml-2 text-[9px] border-accent/40 text-accent">Shooter 1v1</Badge>}</div>
-              </div>
-            </div>
-            <div className="flex gap-1 items-center flex-wrap">
-              <Badge variant="outline" className="capitalize">{m.status}</Badge>
-              {(() => { const anyOpen = (m.markets ?? []).some((mk: any) => mk.is_open); return (
-                <Button size="sm" variant={anyOpen ? "outline" : "default"} onClick={() => toggleOdds(m)} title={anyOpen ? "Lock odds / close betting" : "Unlock odds / open betting"}>
-                  <Lock className="h-3 w-3 mr-1" />{anyOpen ? "Lock Odds" : "Odds Locked"}
-                </Button>
-              ); })()}
-              {m.status === "live" && (
-                <LiveScoreEditor m={m} onSave={(hs, as) => updateLiveScore(m, hs, as)} />
+      <Card className="glass p-3 flex flex-wrap items-center gap-2">
+        <Input placeholder="Search by team, player, name or venue…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+        <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as any)}>
+          <SelectTrigger className="w-40"><Filter className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All kinds</SelectItem>
+            <SelectItem value="team">Team matches</SelectItem>
+            <SelectItem value="shooter">Shooter 1v1</SelectItem>
+          </SelectContent>
+        </Select>
+      </Card>
+
+      <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+        <TabsList>
+          <TabsTrigger value="live">Ongoing ({groups.live.length})</TabsTrigger>
+          <TabsTrigger value="scheduled">Upcoming ({groups.scheduled.length})</TabsTrigger>
+          <TabsTrigger value="ended">Ended ({groups.ended.length})</TabsTrigger>
+        </TabsList>
+
+        {(["live", "scheduled", "ended"] as const).map((key) => {
+          const rows = filterRows(groups[key]);
+          return (
+            <TabsContent key={key} value={key} className="mt-3">
+              {key === "ended" && (
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs text-muted-foreground">Ended matches stay in public history even after clearing.</div>
+                  <Button size="sm" variant="destructive" onClick={clearEnded}>
+                    <Trash2 className="h-3 w-3 mr-1" />Clear from panel
+                  </Button>
+                </div>
               )}
-              {m.status === "scheduled" && <Button size="sm" onClick={() => setStatus(m.id, "live")}>Start Live</Button>}
-              {m.status === "live" && <Button size="sm" onClick={() => settle(m)}>End Match</Button>}
-              <CorrectScoreManagerButton match={m} onSaved={load} />
-              {m.status !== "cancelled" && m.status !== "ended" && <Button size="sm" variant="outline" onClick={() => setStatus(m.id, "cancelled")}>Cancel</Button>}
-              <Button size="sm" variant="destructive" onClick={() => deleteMatch(m.id)} title="Delete match"><Trash2 className="h-3 w-3" /></Button>
-            </div>
-            <div className="w-full flex flex-wrap items-center gap-2 border-t border-border/40 pt-2 mt-1">
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Leaderboard attendance:</span>
-              <Button size="sm" variant={m.home_present === true ? "default" : "destructive"} onClick={() => togglePresence(m, "home")}>
-                {m.home_present === true ? <Check className="h-3 w-3 mr-1" /> : <X className="h-3 w-3 mr-1" />}
-                {(m.match_kind === "shooter" ? m.home_player?.name : m.home_team?.name) ?? "Home"}: {m.home_present === true ? "Present" : "Absent"}
-              </Button>
-              <Button size="sm" variant={m.away_present === true ? "default" : "destructive"} onClick={() => togglePresence(m, "away")}>
-                {m.away_present === true ? <Check className="h-3 w-3 mr-1" /> : <X className="h-3 w-3 mr-1" />}
-                {(m.match_kind === "shooter" ? m.away_player?.name : m.away_team?.name) ?? "Away"}: {m.away_present === true ? "Present" : "Absent"}
-              </Button>
-              <span className="text-[9px] text-muted-foreground">Only sides explicitly marked <b>Present</b> earn leaderboard stats when the match ends.</span>
-            </div>
-          </Card>
-        ))}
-      </div>
+              {rows.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-8 text-center">No matches in this category.</div>
+              ) : (
+                <div className="space-y-2">
+                  {rows.map((m: any) => (
+                    <Card key={m.id} className="glass p-3 flex items-center justify-between gap-3 flex-wrap">
+                      <div className="min-w-0 flex items-center gap-2">
+                        {m.home_team?.logo_url && <img src={m.home_team.logo_url} alt="" className="h-8 w-8 rounded-full object-cover" />}
+                        <div>
+                          <div className="font-bold truncate">{m.match_kind === "shooter" ? m.home_player?.name : m.home_team?.name} vs {m.match_kind === "shooter" ? m.away_player?.name : m.away_team?.name} {m.status === "ended" && <span className="text-xs text-muted-foreground">({m.home_score}–{m.away_score})</span>}</div>
+                          <div className="text-xs text-muted-foreground">{m.name} · {m.start_time ? new Date(m.start_time).toLocaleString() : ""} {m.match_kind === "shooter" && <Badge variant="outline" className="ml-2 text-[9px] border-accent/40 text-accent">Shooter 1v1</Badge>}</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 items-center flex-wrap">
+                        <Badge variant="outline" className="capitalize">{m.status}</Badge>
+                        {(() => { const anyOpen = (m.markets ?? []).some((mk: any) => mk.is_open); return (
+                          <Button size="sm" variant={anyOpen ? "outline" : "default"} onClick={() => toggleOdds(m)} title={anyOpen ? "Lock odds / close betting" : "Unlock odds / open betting"}>
+                            <Lock className="h-3 w-3 mr-1" />{anyOpen ? "Lock Odds" : "Odds Locked"}
+                          </Button>
+                        ); })()}
+                        {m.status === "live" && (
+                          <LiveScoreEditor m={m} onSave={(hs, as) => updateLiveScore(m, hs, as)} />
+                        )}
+                        {m.status === "scheduled" && <Button size="sm" onClick={() => setStatus(m.id, "live")}>Start Live</Button>}
+                        {m.status === "live" && <Button size="sm" onClick={() => settle(m)}>End Match</Button>}
+                        {m.status === "ended" && (
+                          <Button size="sm" variant="outline" onClick={() => setEditEnded(m)} title="Edit final score — leaderboard will recalculate">
+                            <Pencil className="h-3 w-3 mr-1" />Edit Score
+                          </Button>
+                        )}
+                        <CorrectScoreManagerButton match={m} onSaved={load} />
+                        {m.status !== "cancelled" && m.status !== "ended" && <Button size="sm" variant="outline" onClick={() => setStatus(m.id, "cancelled")}>Cancel</Button>}
+                        <Button size="sm" variant="destructive" onClick={() => deleteMatch(m.id)} title="Remove from admin panel"><Trash2 className="h-3 w-3" /></Button>
+                      </div>
+                      <div className="w-full flex flex-wrap items-center gap-2 border-t border-border/40 pt-2 mt-1">
+                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Leaderboard attendance:</span>
+                        <Button size="sm" variant={m.home_present === true ? "default" : "destructive"} onClick={() => togglePresence(m, "home")}>
+                          {m.home_present === true ? <Check className="h-3 w-3 mr-1" /> : <X className="h-3 w-3 mr-1" />}
+                          {(m.match_kind === "shooter" ? m.home_player?.name : m.home_team?.name) ?? "Home"}: {m.home_present === true ? "Present" : "Absent"}
+                        </Button>
+                        <Button size="sm" variant={m.away_present === true ? "default" : "destructive"} onClick={() => togglePresence(m, "away")}>
+                          {m.away_present === true ? <Check className="h-3 w-3 mr-1" /> : <X className="h-3 w-3 mr-1" />}
+                          {(m.match_kind === "shooter" ? m.away_player?.name : m.away_team?.name) ?? "Away"}: {m.away_present === true ? "Present" : "Absent"}
+                        </Button>
+                        <span className="text-[9px] text-muted-foreground">Only sides explicitly marked <b>Present</b> earn leaderboard stats when the match ends.</span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          );
+        })}
+      </Tabs>
     </div>
+  );
+}
+
+/* --- Quick Team Match wizard: minimal form modelled on ShooterMatchWizard --- */
+function QuickTeamMatchWizard({ onClose }: { onClose: () => void }) {
+  const confirm = useConfirm();
+  const [teams, setTeams] = useState<any[]>([]);
+  const [form, setForm] = useState({
+    home_team_id: "", away_team_id: "", oddsA: 2, draw: 3.5, oddsB: 2,
+    name: "", start_time: "", location: "", featured: true,
+    homePresent: false, awayPresent: false,
+  });
+  useEffect(() => { fetchTeams().then(setTeams); }, []);
+
+  async function create() {
+    if (!form.home_team_id || !form.away_team_id) { toast.error("Pick both teams"); return; }
+    if (form.home_team_id === form.away_team_id) { toast.error("Choose two different teams"); return; }
+    const home = teams.find((t) => t.id === form.home_team_id);
+    const away = teams.find((t) => t.id === form.away_team_id);
+    const ok = await confirm({
+      title: "Post this match?",
+      description: `${home?.name} vs ${away?.name}\nOdds: ${form.oddsA} / ${form.draw} / ${form.oddsB}\nStarts: ${form.start_time ? new Date(form.start_time).toLocaleString() : "immediately"}\nVenue: ${form.location || "—"}\nFeatured: ${form.featured ? "Yes" : "No"}`,
+      confirmText: "Post match",
+    });
+    if (!ok) return;
+    const { data: m, error } = await supabase.from("matches").insert({
+      name: form.name || `${home?.name} vs ${away?.name}`,
+      home_team_id: form.home_team_id, away_team_id: form.away_team_id,
+      start_time: form.start_time ? new Date(form.start_time).toISOString() : new Date().toISOString(),
+      location: form.location, status: "scheduled", is_featured: form.featured,
+      home_present: form.homePresent, away_present: form.awayPresent,
+    } as any).select().single();
+    if (error) { toast.error(error.message); return; }
+    const { data: market } = await supabase.from("markets").insert({ match_id: m.id, name: "Match Winner" }).select().single();
+    if (market) await supabase.from("odds").insert([
+      { market_id: market.id, label: home?.name, value: form.oddsA },
+      { market_id: market.id, label: "Draw", value: form.draw },
+      { market_id: market.id, label: away?.name, value: form.oddsB },
+    ]);
+    await logAudit("match_created", "match", m.id, { quick: true });
+    toast.success("Match posted");
+    onClose();
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader><DialogTitle>Quick Team Match</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-muted-foreground">Home team</label>
+              <Select value={form.home_team_id} onValueChange={(v) => setForm({ ...form, home_team_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Pick team" /></SelectTrigger>
+                <SelectContent>{teams.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Away team</label>
+              <Select value={form.away_team_id} onValueChange={(v) => setForm({ ...form, away_team_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Pick team" /></SelectTrigger>
+                <SelectContent>{teams.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div><label className="text-xs">Home odds</label><Input type="number" step="0.01" value={form.oddsA} onChange={(e) => setForm({ ...form, oddsA: Number(e.target.value) })} /></div>
+            <div><label className="text-xs">Draw odds</label><Input type="number" step="0.01" value={form.draw} onChange={(e) => setForm({ ...form, draw: Number(e.target.value) })} /></div>
+            <div><label className="text-xs">Away odds</label><Input type="number" step="0.01" value={form.oddsB} onChange={(e) => setForm({ ...form, oddsB: Number(e.target.value) })} /></div>
+          </div>
+          <Input placeholder="Match name (optional)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <div><label className="text-xs text-muted-foreground">Start time</label><Input type="datetime-local" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} /></div>
+          <Input placeholder="Venue / Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+          <label className="flex items-center gap-2 text-sm"><Switch checked={form.featured} onCheckedChange={(v) => setForm({ ...form, featured: v })} /> Feature on homepage</label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex items-center gap-2 rounded-lg border border-primary/20 bg-card/60 p-3 text-sm"><Switch checked={form.homePresent} onCheckedChange={(v) => setForm({ ...form, homePresent: v })} /> Home present (Leaderboard)</label>
+            <label className="flex items-center gap-2 rounded-lg border border-primary/20 bg-card/60 p-3 text-sm"><Switch checked={form.awayPresent} onCheckedChange={(v) => setForm({ ...form, awayPresent: v })} /> Away present (Leaderboard)</label>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button className="btn-luxury" onClick={create}>Review & Post</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* --- Edit ended-match score: leaderboard auto-recalculates from matches --- */
+function EndedMatchScoreEditor({ match, onClose }: { match: any; onClose: () => void }) {
+  const confirm = useConfirm();
+  const [hs, setHs] = useState<number>(Number(match.home_score ?? 0));
+  const [as_, setAs] = useState<number>(Number(match.away_score ?? 0));
+  const [saving, setSaving] = useState(false);
+  const homeLabel = match.match_kind === "shooter" ? match.home_player?.name : match.home_team?.name;
+  const awayLabel = match.match_kind === "shooter" ? match.away_player?.name : match.away_team?.name;
+
+  async function save() {
+    const ok = await confirm({
+      title: "Update final score?",
+      description: `New score: ${homeLabel} ${hs}–${as_} ${awayLabel}\n\nThe leaderboard will recalculate W/L/D/PTS/TS from this match automatically. Played (P) will not change — it is the same match. Already-paid bets will not be re-settled.`,
+      confirmText: "Save score",
+    });
+    if (!ok) return;
+    setSaving(true);
+    try {
+      let winnerId: string | null = null;
+      if (hs > as_) winnerId = match.home_team_id;
+      else if (as_ > hs) winnerId = match.away_team_id;
+      const { error } = await supabase.from("matches").update({
+        home_score: hs, away_score: as_, winner_team_id: winnerId,
+      } as any).eq("id", match.id);
+      if (error) throw error;
+      await logAudit("match_score_edited", "match", match.id, { home_score: hs, away_score: as_, winner_team_id: winnerId });
+      toast.success("Score updated — leaderboard will recalculate");
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update");
+    } finally { setSaving(false); }
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Edit Ended Match Score</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="text-sm text-muted-foreground">{match.name}</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground">{homeLabel ?? "Home"}</label>
+              <Input type="number" min={0} value={hs} onChange={(e) => setHs(Number(e.target.value))} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">{awayLabel ?? "Away"}</label>
+              <Input type="number" min={0} value={as_} onChange={(e) => setAs(Number(e.target.value))} />
+            </div>
+          </div>
+          <div className="text-[11px] text-muted-foreground border border-amber-400/30 bg-amber-400/5 rounded p-2">
+            The leaderboard reads live from settled matches, so W/L/D/PTS and Total Score update automatically. Played count stays the same for this match. Bet payouts that were already credited are not reversed.
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button className="btn-luxury" disabled={saving} onClick={save}>{saving ? "Saving…" : "Save Score"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
